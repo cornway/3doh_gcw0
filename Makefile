@@ -1,4 +1,4 @@
-CC = clang -Weverything
+CC = gcc
 TARGET = 3doh
 CFLAGS = -O2 -std=gnu99 -pg -DSCALING -DHLE_SWI -DDONTPACK
 CFLAGS += -Isrc -Isrc/freedo

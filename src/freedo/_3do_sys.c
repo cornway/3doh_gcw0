@@ -45,11 +45,6 @@ extern void* Getp_NVRAM(void);
 extern void* Getp_ROMS(void);
 extern void* Getp_RAMS(void);
 
-static INLINE uint32_t _bswap(uint32_t x)
-{
-	return (x >> 24) | ((x >> 8) & 0x0000FF00L) | ((x & 0x0000FF00L) << 8) | (x << 24);
-}
-
 extern void* _xbplug_MainDevice(int proc, void* data);
 
 extern char biosFile[128];
@@ -63,7 +58,7 @@ int _3do_Init(void)
 	Memory = _arm_Init();
 
 	fsReadBios(biosFile, Getp_ROMS());
-	
+
 	rom = (uint8_t*)Getp_ROMS();
 	for (i = (1024 * 1024 * 2) - 4; i >= 0; i -= 4)
 		*(int*)(rom + i) = _bswap(*(int*)(rom + i));
@@ -131,7 +126,7 @@ void _3do_InternalFrame(int cycles)
 	if (_qrz_QueueDSP())
 	{
 		soundFillBuffer(_dsp_Loop());
-		count_samples++;	
+		count_samples++;
 	}
 
 	if (_qrz_QueueTimer())
