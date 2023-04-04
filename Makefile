@@ -1,8 +1,8 @@
 CC = gcc
 TARGET = 3doh
-CFLAGS = -O2 -std=gnu99 -pg -DSCALING -DHLE_SWI -DDONTPACK
+CFLAGS = -O2 -std=gnu99 -pg -DSCALING -DHLE_SWI -DDONTPACK -DMPSOC
 CFLAGS += -Isrc -Isrc/freedo
-LDFLAGS= -lSDL -lm
+LDFLAGS= -lSDL -lm -lmetal
 
 OBJS = \
 	src/freedo/arm.o \
@@ -27,6 +27,7 @@ OBJS = \
 	src/config.o \
 	src/cuefile.o \
 	src/font/font_drawing.o \
+	src/mpsoc_infra.o \
 	src/main.o
 
 all: $(TARGET)

@@ -41,6 +41,11 @@
 #include "sound.h"
 #include "input.h"
 
+static INLINE uint32_t _bswap_3do(uint32_t x)
+{
+       return (x >> 24) | ((x >> 8) & 0x0000FF00L) | ((x & 0x0000FF00L) << 8) | (x << 24);
+}
+
 extern void* Getp_NVRAM(void);
 extern void* Getp_ROMS(void);
 extern void* Getp_RAMS(void);
@@ -61,7 +66,7 @@ int _3do_Init(void)
 
 	rom = (uint8_t*)Getp_ROMS();
 	for (i = (1024 * 1024 * 2) - 4; i >= 0; i -= 4)
-		*(int*)(rom + i) = _bswap(*(int*)(rom + i));
+		*(int*)(rom + i) = _bswap_3do(*(int*)(rom + i));
 
 	_vdl_Init(Memory + 0x200000);   // Visible only VRAM to it
 	_sport_Init(Memory + 0x200000); // Visible only VRAM to it

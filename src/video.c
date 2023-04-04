@@ -32,16 +32,19 @@ struct VDLFrame *frame;
 int videoInit(void)
 {
 	frame = (struct VDLFrame*)malloc(sizeof(struct VDLFrame));
+	int error;
 
-	#ifndef __EMSCRIPTEN__
-	if ((SDL_Init( SDL_INIT_VIDEO )) < 0 ) {
-		printf("ERROR: can't init video\n");
-		return 0;
+	error = SDL_Init( SDL_INIT_VIDEO );
+#ifndef __EMSCRIPTEN__
+	if (error < 0 ) {
+		printf("ERROR: can't init video, error=%s\n", SDL_GetError());
+		free(frame);
+		return error;
 	}
 	SDL_ShowCursor(0);
-	#else
+#else
 	SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO);
-	#endif
+#endif
 	
 	printf("Bitdepth is %d\n", BPP);
 	

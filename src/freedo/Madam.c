@@ -21,6 +21,7 @@
    Felix Lazarev
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
@@ -32,6 +33,9 @@
 #include "arm.h"
 
 #include "bitop.h"
+
+#include "mpsoc_infra.h"
+
 struct BitReaderBig bitoper;
 
 extern int sf;
@@ -324,6 +328,8 @@ union   PXC {
 
 
 //*******************************************
+#ifndef MPSOC
+
 #ifndef DONTPACK
 #pragma pack(push,1)
 #endif
@@ -338,6 +344,7 @@ struct MADAMDatum {
 #ifndef DONTPACK
 #pragma pack(pop)
 #endif
+
 static struct MADAMDatum madam;
 
 uint32_t Get_madam_FSM(void)
@@ -371,6 +378,97 @@ void _madam_Load(void *buff)
 #define RMOD madam.RMOD
 #define WMOD madam.WMOD
 #define _madam_FSM madam._madam_FSM
+
+#else /*MPSOC*/
+
+struct MADAMDatum {
+	uint32_t *mregs;
+	uint16_t *PLUT;
+	uint8_t *PBUSQueue;
+	int32_t *RMOD;
+	int32_t *WMOD;
+	unsigned int *_madam_FSM;
+};
+
+static mpsoc_dev_t mpsoc_dev;
+
+static struct MADAMDatum madam;
+
+static void _madam_mpsoc_init (void)
+{
+	mpsoc_dev.dev = mpsoc_dev_open("axi_bram_ctrl_1");
+	assert(mpsoc_dev.dev != NULL);
+
+	mpsoc_dev.io = mpsoc_dev_io(mpsoc_dev.dev);
+
+	madam.mregs = mpsoc_dev.io;
+	madam.PLUT = mpsoc_dev.io + 0x1000;
+	madam.PBUSQueue = mpsoc_dev.io + 0x2000;
+	madam.RMOD = mpsoc_dev.io + 0x4000;
+	madam.WMOD = mpsoc_dev.io + 0x4010;
+	madam._madam_FSM = mpsoc_dev.io + 0x4020;
+}
+
+uint32_t Get_madam_FSM(void)
+{
+	return *madam._madam_FSM;
+}
+
+void Set_madam_FSM(uint32_t val)
+{
+	*madam._madam_FSM = val;
+}
+
+uint32_t _madam_SaveSize(void)
+{
+	return sizeof(uint32_t) * (2048 + 64) +
+			sizeof(uint32_t) * 32 +
+			sizeof(uint32_t) * 20 +
+			sizeof(uint32_t) * 3;
+}
+
+static void *_madam_Copy_to(void *dst, void *src, size_t size)
+{
+	memcpy(dst, src, size);
+	return dst + size;
+}
+
+static void *_madam_Copy_from(void *src, void *dst, size_t size)
+{
+	memcpy(dst, src, size);
+	return src + size;
+}
+
+void _madam_Save(void *buff)
+{
+	buff = _madam_Copy_to(buff, madam.mregs, sizeof(uint32_t) * (2048 + 64));
+	buff = _madam_Copy_to(buff, madam.PLUT, sizeof(uint32_t) * (32));
+	buff = _madam_Copy_to(buff, madam.PBUSQueue, sizeof(uint32_t) * (20));
+	buff = _madam_Copy_to(buff, madam.RMOD, sizeof(uint32_t));
+	buff = _madam_Copy_to(buff, madam.WMOD, sizeof(uint32_t));
+	buff = _madam_Copy_to(buff, madam._madam_FSM, sizeof(uint32_t));
+}
+
+void _madam_Load(void *buff)
+{
+	buff = _madam_Copy_from(buff, madam.mregs, sizeof(uint32_t) * (2048 + 64));
+	buff = _madam_Copy_from(buff, madam.PLUT, sizeof(uint32_t) * (32));
+	buff = _madam_Copy_from(buff, madam.PBUSQueue, sizeof(uint32_t) * (20));
+	buff = _madam_Copy_from(buff, madam.RMOD, sizeof(uint32_t));
+	buff = _madam_Copy_from(buff, madam.WMOD, sizeof(uint32_t));
+	buff = _madam_Copy_from(buff, madam._madam_FSM, sizeof(uint32_t));
+}
+
+#define mregs madam.mregs
+#define PLUT madam.PLUT
+#define PBUSQueue madam.PBUSQueue
+#define RMOD madam.RMOD[0]
+#define WMOD madam.WMOD[0]
+#define _madam_FSM madam._madam_FSM[0]
+
+#endif /*MPSOC*/
+
+
 //*******************************************
 
 uint32_t PXOR1, PXOR2;
@@ -1079,6 +1177,10 @@ void _madam_Init(uint8_t *memory)
 	Mem = memory;
 
 	bitoper.bitset = 1;
+
+#ifdef MPSOC
+	_madam_mpsoc_init();
+#endif
 
 	quickDivide_init();
 

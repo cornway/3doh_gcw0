@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 #include <sys/stat.h>
 #include <SDL/SDL.h>
 #ifdef __EMSCRIPTEN__
@@ -33,6 +34,8 @@
 #ifndef __EMSCRIPTEN__
 #include "font/font_drawing.h"
 #endif
+
+#include "mpsoc_infra.h"
 
 char* pNVRam;
 /*extern _ext_Interface io_interface;
@@ -152,8 +155,11 @@ int main(int argc, char *argv[])
 	int quit = 0;
 	FILE* fp;
 
+	mpsoc_infra_init();
+
 	/* Create Display before in case it crashes before that */
-	videoInit();
+	error = videoInit();
+	assert(error == 0);
 
 #if defined(__EMSCRIPTEN__)
 
@@ -297,6 +303,7 @@ got_error:
 	SDL_Quit();
 	_3do_Destroy();
 	fsClose();
+	mpsoc_infra_close();
 #else
 
 #endif
