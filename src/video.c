@@ -37,7 +37,7 @@ int videoInit(void)
 	error = SDL_Init( SDL_INIT_VIDEO );
 #ifndef __EMSCRIPTEN__
 	if (error < 0 ) {
-		printf("ERROR: can't init video, error=%s\n", SDL_GetError());
+		mpsoc_log("ERROR: can't init video, error=%s\n", SDL_GetError());
 		free(frame);
 		return error;
 	}
@@ -46,7 +46,7 @@ int videoInit(void)
 	SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 #endif
 	
-	printf("Bitdepth is %d\n", BPP);
+	mpsoc_log("Bitdepth is %d\n", BPP);
 	
 	#ifdef SCALING
 	rl_screen = SDL_SetVideoMode(0, 0, BPP, flags);

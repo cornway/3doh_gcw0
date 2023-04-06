@@ -1,16 +1,16 @@
+
+FPGA_OFFLOAD ?= 1
 CC = gcc
 TARGET = 3doh
-CFLAGS = -O2 -std=gnu99 -pg -DSCALING -DHLE_SWI -DDONTPACK -DMPSOC
+CFLAGS = -O2 -std=gnu99 -pg -DSCALING -DHLE_SWI -DDONTPACK
 CFLAGS += -Isrc -Isrc/freedo
 LDFLAGS= -lSDL -lm -lmetal
 
 OBJS = \
-	src/freedo/arm.o \
 	src/freedo/DiagPort.o\
 	src/freedo/quarz.o\
 	src/freedo/Clio.o \
 	src/freedo/frame.o \
-	src/freedo/Madam.o \
 	src/freedo/vdlp.o \
 	src/freedo/_3do_sys.o \
 	src/freedo/bitop.o \
@@ -28,7 +28,17 @@ OBJS = \
 	src/cuefile.o \
 	src/font/font_drawing.o \
 	src/mpsoc_infra.o \
+	src/mpsoc_mmap.o \
 	src/main.o
+
+ifeq ($(FPGA_OFFLOAD),1)
+CFLAGS += -DMPSOC
+OBJS += src/freedo/offload/Madam_offload.o \
+		src/freedo/offload/arm_offload.o
+else
+OBJS += src/freedo/Madam.o \
+		src/freedo/arm.o 
+endif
 
 all: $(TARGET)
 

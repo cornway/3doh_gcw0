@@ -60,23 +60,39 @@ int _3do_Init(void)
 	uint8_t *Memory;
 	uint8_t *rom;
 
+	mpsoc_log("_arm_Init...\n");
 	Memory = _arm_Init();
 
+	mpsoc_log("fsReadBios...\n");
 	fsReadBios(biosFile, Getp_ROMS());
 
+	mpsoc_log("Getp_ROMS...\n");
 	rom = (uint8_t*)Getp_ROMS();
 	for (i = (1024 * 1024 * 2) - 4; i >= 0; i -= 4)
 		*(int*)(rom + i) = _bswap_3do(*(int*)(rom + i));
 
+	mpsoc_log("_vdl_Init...\n");
 	_vdl_Init(Memory + 0x200000);   // Visible only VRAM to it
+
+	mpsoc_log("_sport_Init...\n");
 	_sport_Init(Memory + 0x200000); // Visible only VRAM to it
+
+	mpsoc_log("_madam_Init...\n");
 	_madam_Init(Memory);
 
+	mpsoc_log("_xbus_Init...\n");
 	_xbus_Init(_xbplug_MainDevice);
 
+	mpsoc_log("_clio_Init...\n");
 	_clio_Init(0x40); // 0x40 for start from  3D0-CD, 0x01/0x02 from PhotoCD ?? (NO use 0x40/0x02 for BIOS test)
+
+	mpsoc_log("_clio_Init...\n");
 	_dsp_Init();
+
+	mpsoc_log("_frame_Init...\n");
 	_frame_Init();
+
+	mpsoc_log("_diag_Init...\n");
 	_diag_Init(-1); // Select test, use -1 -- if d'nt need tests
 	/*
 	   00	DIAGNOSTICS TEST	(run of test: 1F, 24, 25, 32, 50, 51, 60, 61, 62, 68, 71, 75, 80, 81, 90)
@@ -106,6 +122,7 @@ int _3do_Init(void)
 	   F1	REVISION TEST
 	   FF	TEST END (halt)
 	 */
+	mpsoc_log("_xbus_DevLoad...\n");
 	_xbus_DevLoad(0, NULL);
 
 	_qrz_Init();

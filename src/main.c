@@ -155,7 +155,11 @@ int main(int argc, char *argv[])
 	int quit = 0;
 	FILE* fp;
 
+#ifdef MPSOC
 	mpsoc_infra_init();
+#endif
+
+	mpsoc_log("Entering main\n");
 
 	/* Create Display before in case it crashes before that */
 	error = videoInit();
