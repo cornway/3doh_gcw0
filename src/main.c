@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
 
 	/* Create Display before in case it crashes before that */
 	error = videoInit();
-	assert(error == 0);
+	mpsoc_assert(error == 0);
 
 #if defined(__EMSCRIPTEN__)
 

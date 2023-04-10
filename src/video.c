@@ -31,6 +31,9 @@ struct VDLFrame *frame;
 
 int videoInit(void)
 {
+#ifdef NO_VIDEO
+	return 0;
+#endif
 	frame = (struct VDLFrame*)malloc(sizeof(struct VDLFrame));
 	int error;
 
@@ -66,6 +69,9 @@ void toggleFullscreen(void)
 
 int videoClose(void)
 {
+#ifdef NO_VIDEO
+	return 0;
+#endif
 	if (frame)
 	{
 		free(frame);
@@ -92,7 +98,11 @@ void videoFlip(void)
 {
 	uint_fast16_t line;
 	_3do_Frame((struct VDLFrame*)frame, true);
-	
+
+#ifdef NO_VIDEO
+	return;
+#endif
+
 	#if defined(__EMSCRIPTEN__)
 	for(line=0;line<256;line++)
 	{
@@ -102,7 +112,7 @@ void videoFlip(void)
 	line = 0;
 	while (line < 256) _vdl_DoLineNew(line++, (struct VDLFrame*)frame);
 	#endif
-	
+
 	SDL_LockSurface( screen );
 	Get_Frame_Bitmap((struct VDLFrame*)frame, screen->pixels, SCREEN_WIDTH, SCREEN_HEIGHT);
 	#if defined(FRAMECONTER) && !defined(SCALING)

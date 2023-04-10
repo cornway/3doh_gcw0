@@ -565,13 +565,14 @@ uint8_t *_arm_Init(void)
 	pRam = mpsoc_mmap_shared(&shared_pRam_map_fd);
 	mpsoc_assert(pRam);
 
+
 	//pRam   = malloc(RAMSIZE * sizeof(uint8_t));
 	pRom   = malloc(ROMSIZE * 2 * sizeof(uint8_t));
 	pNVRam = malloc(NVRAMSIZE * sizeof(uint8_t));
 
-	//mpsoc_memset( pRam, 0, RAMSIZE);
-	mpsoc_memset( pRom, 0, ROMSIZE * 2);
-	mpsoc_memset( pNVRam, 0, NVRAMSIZE);
+	mpsoc_memset( pRam, 0, RAMSIZE);
+	memset( pRom, 0, ROMSIZE * 2);
+	memset( pNVRam, 0, NVRAMSIZE);
 	gFIQ = false;
 
 	readNvRam(pNVRam);

@@ -86,7 +86,7 @@ int _3do_Init(void)
 	mpsoc_log("_clio_Init...\n");
 	_clio_Init(0x40); // 0x40 for start from  3D0-CD, 0x01/0x02 from PhotoCD ?? (NO use 0x40/0x02 for BIOS test)
 
-	mpsoc_log("_clio_Init...\n");
+	mpsoc_log("_dsp_Init...\n");
 	_dsp_Init();
 
 	mpsoc_log("_frame_Init...\n");
@@ -127,6 +127,7 @@ int _3do_Init(void)
 
 	_qrz_Init();
 
+	mpsoc_log("3DO init done\n");
 	return 1;
 }
 

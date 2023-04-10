@@ -171,7 +171,7 @@ void *mpsoc_dev_io(const void *_dev)
     void *io = metal_device_io_region(dev, 0);
 
     if (io == NULL) {
-		metal_log(METAL_LOG_ERROR, "\n Failed to map RFDC region for %s.\n", dev->name);
+		metal_log(METAL_LOG_ERROR, "\n Failed to map IO region for %s.\n", dev->name);
         return NULL;
     }
 
@@ -186,7 +186,7 @@ void *mpsoc_dev_io(const void *_dev)
 
     vptr = mpsoc_mmap(paddr, psize);
 
-    mpsoc_log("paddr=%x psize=%x vaddr=%x\n", paddr, psize, vptr);
+    mpsoc_log("mpsoc_dev_io: paddr=%x psize=%x vaddr=%x\n", paddr, psize, vptr);
 
     return vptr;
 }

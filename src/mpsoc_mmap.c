@@ -23,6 +23,7 @@ void *mpsoc_mmap_shared (int *_fd)
     size_t buf_size = 0x04000000;
 
     if ((fd  = open("/dev/udmabuf0", O_RDWR | O_SYNC)) != -1) {
+        ftruncate(fd, buf_size);
         buf = mmap(NULL, buf_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
     }
     *_fd = fd;

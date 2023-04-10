@@ -1,8 +1,10 @@
 
 FPGA_OFFLOAD ?= 1
+NO_VIDEO ?= 0
+DEBUG ?= 1
 CC = gcc
 TARGET = 3doh
-CFLAGS = -O2 -std=gnu99 -pg -DSCALING -DHLE_SWI -DDONTPACK
+CFLAGS = -O0 -std=gnu99 -DSCALING -DHLE_SWI -DDONTPACK
 CFLAGS += -Isrc -Isrc/freedo
 LDFLAGS= -lSDL -lm -lmetal
 
@@ -31,9 +33,18 @@ OBJS = \
 	src/mpsoc_mmap.o \
 	src/main.o
 
+ifeq ($(DEBUG),1)
+CFLAGS += -g
+endif
+
+ifeq ($(NO_VIDEO),1)
+CFLAGS += -DNO_VIDEO
+endif
+
 ifeq ($(FPGA_OFFLOAD),1)
 CFLAGS += -DMPSOC
 OBJS += src/freedo/offload/Madam_offload.o \
+		src/freedo/offload/Madam_offload_setup.o \
 		src/freedo/offload/arm_offload.o
 else
 OBJS += src/freedo/Madam.o \

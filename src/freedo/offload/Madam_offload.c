@@ -35,7 +35,9 @@
 #include "bitop.h"
 
 #include "mpsoc_infra.h"
+#include "Madam_offload_vars.h"
 
+static struct MADAMDatum madam;
 struct BitReaderBig bitoper;
 
 extern int sf;
@@ -44,329 +46,19 @@ extern int unknownflag11;
 extern int fixmode;
 extern int speedfixes;
 
-/* === CCB control word flags === */
-#define CCB_SKIP        0x80000000
-#define CCB_LAST        0x40000000
-#define CCB_NPABS       0x20000000
-#define CCB_SPABS       0x10000000
-#define CCB_PPABS       0x08000000
-#define CCB_LDSIZE      0x04000000
-#define CCB_LDPRS       0x02000000
-#define CCB_LDPPMP      0x01000000
-#define CCB_LDPLUT      0x00800000
-#define CCB_CCBPRE      0x00400000
-#define CCB_YOXY        0x00200000
-#define CCB_ACSC        0x00100000
-#define CCB_ALSC        0x00080000
-#define CCB_ACW         0x00040000
-#define CCB_ACCW        0x00020000
-#define CCB_TWD         0x00010000
-#define CCB_LCE         0x00008000
-#define CCB_ACE         0x00004000
-#define CCB_reserved13  0x00002000
-#define CCB_MARIA       0x00001000
-#define CCB_PXOR        0x00000800
-#define CCB_USEAV       0x00000400
-#define CCB_PACKED      0x00000200
-#define CCB_POVER_MASK  0x00000180
-#define CCB_PLUTPOS     0x00000040
-#define CCB_BGND        0x00000020
-#define CCB_NOBLK       0x00000010
-#define CCB_PLUTA_MASK  0x0000000F
-
-#define CCB_POVER_SHIFT  7
-#define CCB_PLUTA_SHIFT  0
-
-#define PMODE_PDC   ((0x00000000) << CCB_POVER_SHIFT) /* Normal */
-#define PMODE_ZERO  ((0x00000002) << CCB_POVER_SHIFT)
-#define PMODE_ONE   ((0x00000003) << CCB_POVER_SHIFT)
-
-//  === CCBCTL0 flags ===
-#define B15POS_MASK   0xC0000000
-#define B0POS_MASK    0x30000000
-#define SWAPHV        0x08000000
-#define ASCALL        0x04000000
-#define _CCBCTL0_u25  0x02000000
-#define CFBDSUB       0x01000000
-#define CFBDLSB_MASK  0x00C00000
-#define PDCLSB_MASK   0x00300000
-
-#define B15POS_SHIFT  30
-#define B0POS_SHIFT   28
-#define CFBD_SHIFT    22
-#define PDCLSB_SHIFT  20
-
-//  B15POS_MASK definitions
-#define B15POS_0    0x00000000
-#define B15POS_1    0x40000000
-#define B15POS_PDC  0xC0000000
-
-//  B0POS_MASK definitions
-#define B0POS_0     0x00000000
-#define B0POS_1     0x10000000
-#define B0POS_PPMP  0x20000000
-#define B0POS_PDC   0x30000000
-
-/*
-   //  CFBDLSB_MASK definitions
- #define CFBDLSB_0      0x00000000
- #define CFBDLSB_CFBD0  0x00400000
- #define CFBDLSB_CFBD4  0x00800000
- #define CFBDLSB_CFBD5  0x00C00000
-
-   //  PDCLSB_MASK definitions
- #define PDCLSB_0     0x00000000
- #define PDCLSB_PDC0  0x00100000
- #define PDCLSB_PDC4  0x00200000
- #define PDCLSB_PDC5  0x00300000
- */
-
-/* === Cel first preamble word flags === */
-#define PRE0_LITERAL    0x80000000
-#define PRE0_BGND       0x40000000
-#define PREO_reservedA  0x30000000
-#define PRE0_SKIPX_MASK 0x0F000000
-#define PREO_reservedB  0x00FF0000
-#define PRE0_VCNT_MASK  0x0000FFC0
-#define PREO_reservedC  0x00000020
-#define PRE0_LINEAR     0x00000010
-#define PRE0_REP8       0x00000008
-#define PRE0_BPP_MASK   0x00000007
-
-#define PRE0_SKIPX_SHIFT 24
-#define PRE0_VCNT_SHIFT  6
-#define PRE0_BPP_SHIFT   0
-
-/* PRE0_BPP_MASK definitions */
-#define PRE0_BPP_1   0x00000001
-#define PRE0_BPP_2   0x00000002
-#define PRE0_BPP_4   0x00000003
-#define PRE0_BPP_6   0x00000004
-#define PRE0_BPP_8   0x00000005
-#define PRE0_BPP_16  0x00000006
-
-/* Subtract this value from the actual vertical source line count */
-#define PRE0_VCNT_PREFETCH    1
-
-
-/* === Cel second preamble word flags === */
-#define PRE1_WOFFSET8_MASK   0xFF000000
-#define PRE1_WOFFSET10_MASK  0x03FF0000
-#define PRE1_NOSWAP          0x00004000
-#define PRE1_TLLSB_MASK      0x00003000
-#define PRE1_LRFORM          0x00000800
-#define PRE1_TLHPCNT_MASK    0x000007FF
-
-#define PRE1_WOFFSET8_SHIFT   24
-#define PRE1_WOFFSET10_SHIFT  16
-#define PRE1_TLLSB_SHIFT      12
-#define PRE1_TLHPCNT_SHIFT    0
-
-#define PRE1_TLLSB_0     0x00000000
-#define PRE1_TLLSB_PDC0  0x00001000 /* Normal */
-#define PRE1_TLLSB_PDC4  0x00002000
-#define PRE1_TLLSB_PDC5  0x00003000
-
-/* Subtract this value from the actual word offset */
-#define PRE1_WOFFSET_PREFETCH 2
-/* Subtract this value from the actual pixel count */
-#define PRE1_TLHPCNT_PREFETCH 1
-
-#define PPMP_0_SHIFT 0
-#define PPMP_1_SHIFT 16
-
-#define PPMPC_1S_MASK  0x00008000
-#define PPMPC_MS_MASK  0x00006000
-#define PPMPC_MF_MASK  0x00001C00
-#define PPMPC_SF_MASK  0x00000300
-#define PPMPC_2S_MASK  0x000000C0
-#define PPMPC_AV_MASK  0x0000003E
-#define PPMPC_2D_MASK  0x00000001
-
-#define PPMPC_MS_SHIFT  13
-#define PPMPC_MF_SHIFT  10
-#define PPMPC_SF_SHIFT  8
-#define PPMPC_2S_SHIFT  6
-#define PPMPC_AV_SHIFT  1
-
-/* PPMPC_1S_MASK definitions */
-#define PPMPC_1S_PDC   0x00000000
-#define PPMPC_1S_CFBD  0x00008000
-
-/* PPMPC_MS_MASK definitions */
-#define PPMPC_MS_CCB         0x00000000
-#define PPMPC_MS_PIN         0x00002000
-#define PPMPC_MS_PDC_MFONLY  0x00004000
-#define PPMPC_MS_PDC         0x00004000
-
-/* PPMPC_MF_MASK definitions */
-#define PPMPC_MF_1  0x00000000
-#define PPMPC_MF_2  0x00000400
-#define PPMPC_MF_3  0x00000800
-#define PPMPC_MF_4  0x00000C00
-#define PPMPC_MF_5  0x00001000
-#define PPMPC_MF_6  0x00001400
-#define PPMPC_MF_7  0x00001800
-#define PPMPC_MF_8  0x00001C00
-
-/* PPMPC_SF_MASK definitions */
-#define PPMPC_SF_2   0x00000100
-#define PPMPC_SF_4   0x00000200
-#define PPMPC_SF_8   0x00000300
-#define PPMPC_SF_16  0x00000000
-
-/* PPMPC_2S_MASK definitions */
-#define PPMPC_2S_0     0x00000000
-#define PPMPC_2S_CCB   0x00000040
-#define PPMPC_2S_CFBD  0x00000080
-#define PPMPC_2S_PDC   0x000000C0
-
-/* PPMPC_2D_MASK definitions */
-#define PPMPC_2D_1  0x00000000
-#define PPMPC_2D_2  0x00000001
-
-
-#ifndef DONTPACK
-#pragma pack(push,1)
-#endif
-
-struct cp1btag {
-	uint16_t c : 1;
-	uint16_t pad : 15;
-};
-struct cp2btag {
-	uint16_t c : 2;
-	uint16_t pad : 14;
-};
-typedef struct cp4btag {
-	uint16_t c : 4;
-	uint16_t pad : 12;
-} cp4b;
-struct cp6btag {
-	uint16_t c : 5;
-	uint16_t pw : 1;
-	uint16_t pad : 10;
-};
-struct cp8btag {
-	uint16_t c : 5;
-	uint16_t mpw : 1;
-	uint16_t m : 2;
-	uint16_t pad : 8;
-};
-struct cp16btag {
-	uint16_t c : 5;
-	uint16_t mb : 3;
-	uint16_t mg : 3;
-	uint16_t mr : 3;
-	uint16_t pad : 1;
-	uint16_t pw : 1;
-};
-struct up8btag {
-	uint16_t b : 2;
-	uint16_t g : 3;
-	uint16_t r : 3;
-	uint16_t pad : 8;
-};
-struct up16btag {
-	uint16_t bw : 1;
-	uint16_t b : 4;
-	uint16_t g : 5;
-	uint16_t r : 5;
-	uint16_t p : 1;
-};
-struct res16btag {
-	uint16_t b : 5;
-	uint16_t g : 5;
-	uint16_t r : 5;
-	uint16_t p : 1;
-};
-
-union pdeco {
-	unsigned int raw;
-	struct cp1btag c1b;
-	struct cp2btag c2b;
-	struct cp4btag c4b;
-	struct cp6btag c6b;
-	struct cp8btag c8b;
-	struct cp16btag c16b;
-	struct up8btag u8b;
-	struct up16btag u16b;
-	struct res16btag r16b;
-};
-
-struct avtag {
-	uint8_t NEG : 1;
-	uint8_t XTEND : 1;
-	uint8_t nCLIP : 1;
-	uint8_t dv3 : 2;
-	uint8_t pad : 3;
-};
-
-union AVS {
-	struct avtag avsignal;
-	unsigned int raw;
-};
-
-struct pixctag {
-	uint8_t dv2 : 1;
-	uint8_t av : 5; // why int don't work???
-	uint8_t s2 : 2;
-	uint8_t dv1 : 2;
-	uint8_t mxf : 3;
-	uint8_t ms : 2;
-	uint8_t s1 : 1;
-};
-
-union   PXC {
-	struct pixctag meaning;
-	unsigned int raw;
-};
-
-#ifndef DONTPACK
-#pragma pack(pop)
-#endif
-
 
 //*******************************************
 
-struct MADAMDatum {
-	uint32_t *mregs;
-	uint16_t *PLUT;
-	uint8_t *PBUSQueue;
-	int32_t *RMOD;
-	int32_t *WMOD;
-	unsigned int *_madam_FSM;
-	uint32_t *utils;
-};
-
 static mpsoc_dev_t mpsoc_dev;
-
-static struct MADAMDatum madam;
-
-static void _madam_mpsoc_init (void)
-{
-	mpsoc_dev.dev = mpsoc_dev_open("axi_bram_ctrl_mregs");
-	mpsoc_assert(mpsoc_dev.dev != NULL);
-
-	mpsoc_dev.io = mpsoc_dev_io(mpsoc_dev.dev);
-
-	madam.mregs = mpsoc_dev.io;
-	madam.PLUT = mpsoc_dev.io + 0x1000;
-	madam.PBUSQueue = mpsoc_dev.io + 0x2000;
-	madam.RMOD = mpsoc_dev.io + 0x4000;
-	madam.WMOD = mpsoc_dev.io + 0x4010;
-	madam._madam_FSM = mpsoc_dev.io + 0x4020;
-	madam.utils = mpsoc_dev.io + 0x8000;
-}
 
 uint32_t Get_madam_FSM(void)
 {
-	return *madam._madam_FSM;
+	return madam._madam_FSM[0];
 }
 
 void Set_madam_FSM(uint32_t val)
 {
-	*madam._madam_FSM = val;
+	madam._madam_FSM[0] = val;
 }
 
 uint32_t _madam_SaveSize(void)
@@ -416,99 +108,11 @@ void _madam_Load(void *buff)
 #define WMOD madam.WMOD[0]
 #define _madam_FSM madam._madam_FSM[0]
 
-
-//*******************************************
-
-uint32_t PXOR1, PXOR2;
-
-
-#define PDV(x) ((((x) - 1) & 3) + 1)
-
-
-#define MIN(x, y) (x) + (((signed int)((y) - (x)) >> 31 & ((y) - (x))))
-#define MAX(x, y) (y) - (((signed int)((y) - (x)) >> 31 & ((y) - (x))))
-
-#define TESTCLIP(cx, cy) ( ((cx) >= 0) && ((cx) <= CLIPXVAL) && ((cy) >= 0) && ((cy) <= CLIPYVAL) )
-
-
-#define  XY2OFF(a, b, c)   (  (((b) >> 1) * (c) /*bitmap width*/)   + (((int)(b) & 1) << 1) +    (a)    )
-
-
-#define PBMASK 0x80000000
-#define KUP    0x08000000
-#define KDN    0x10000000
-#define KRI    0x04000000
-#define KLE    0x02000000
-#define KA     0x01000000
-#define KB     0x00800000
-#define KC     0x00400000
-#define KP     0x00200000
-#define KX     0x00100000
-#define KRS    0x00080000
-#define KLS    0x00040000
-#define FIXP16_SHIFT     16
-#define FIXP16_MAG       65536
-#define FIXP16_DP_MASK   0x0000ffff
-#define FIXP16_WP_MASK   0xffff0000
-#define FIXP16_ROUND_UP  0x0000ffff //0x8000
-
-
-
-// TYPES ///////////////////////////////////////////////////////////////////
-
-
-// CLASSES /////////////////////////////////////////////////////////////////
-uint32_t  mread(uint32_t addr);
-void  mwrite(uint32_t addr, uint32_t val);
-int TestInitVisual(int packed);
-int Init_Line_Map(void);
-void Init_Scale_Map(void);
-void Init_Arbitrary_Map(void);
-void TexelDraw_BitmapRow(uint16_t LAMV, int xcur, int ycur, int cnt);
-void TexelDraw_Line(uint16_t CURPIX, uint16_t LAMV, int xcur, int ycur, int cnt);
-int  TexelDraw_Scale(uint16_t CURPIX, uint16_t LAMV, int xcur, int ycur, int deltax, int deltay);
-int  TexelDraw_Arbitrary(uint16_t CURPIX, uint16_t LAMV, int xA, int yA, int xB, int yB, int xC, int yC, int xD, int yD);
-void  DrawPackedCel_New(void);
-void  DrawLiteralCel_New(void);
-void  DrawLRCel_New(void);
-void HandleDMA8(void);
-void DMAPBus(void);
-
-
 uint32_t MAPPING;
-
-// general 3D vertex class
-
-#define INT1220(a)       ((signed int)(a) >> 20)
-#define INT1220up(a) ((signed int)((a) + (1 << 19)) >> 20)
-
-static struct {
-	uint32_t plutaCCBbits;
-	uint32_t pixelBitsMask;
-	bool tmask;
-} pdec;
-
-static struct {
-	uint32_t pmode;
-	uint32_t pmodeORmask;
-	uint32_t pmodeANDmask;
-	bool Transparent;
-} pproj;
 
 unsigned int pbus = 0;
 uint8_t * Mem;
 unsigned int retuval;
-unsigned int BITADDR;
-unsigned int BITBUFLEN;
-unsigned int BITBUF;
-unsigned int CCBFLAGS, /*PLUTDATA*/ PIXC, PRE0, PRE1, TARGETPROJ, SRCDATA, debug;
-int SPRWI, SPRHI;
-unsigned int PLUTF, PDATF, NCCBF;
-int CELCYCLES, __smallcycles;
-bool ADD;
-//static SDL_Event cpuevent;
-int BITCALC;
-
 
 uint16_t bitbuf;        //bit buffer
 uint8_t subbitbuf;      // bit sub buffer
@@ -519,8 +123,6 @@ uint16_t RRR;
 int USECEL;
 
 unsigned int const BPP[8] = { 1, 1, 2, 4, 6, 8, 16, 1 };
-
-uint8_t PSCALAR[8][4][32];
 
 uint16_t MAPu8b[256 + 64], MAPc8bAMV[256 + 64], MAPc16bAMV[8 * 8 * 8 + 64];
 
@@ -543,41 +145,6 @@ unsigned int OFF;
 unsigned int pSource;
 
 //AString str;
-
-//CelEngine STATBits
-#define STATBITS        mregs[0x28]
-
-#define SPRON           0x10
-#define SPRPAU          0x20
-
-//CelEngine Registers
-#define SPRSTRT         0x100
-#define SPRSTOP         0x104
-#define SPRCNTU         0x108
-#define SPRPAUS         0x10c
-
-#define CCBCTL0         mregs[0x110]
-#define REGCTL0         mregs[0x130]
-#define REGCTL1         mregs[0x134]
-#define REGCTL2         mregs[0x138]
-#define REGCTL3         mregs[0x13c]
-
-#define CLIPXVAL        ((int)mregs[0x134] & 0x3ff)
-#define CLIPYVAL        ((int)(mregs[0x134] >> 16) & 0x3ff)
-
-#define PIXSOURCE       (mregs[0x138])
-#define FBTARGET        (mregs[0x13c])
-
-#define CURRENTCCB      mregs[0x5a0]
-//next ccb == 0 stop the engine
-#define NEXTCCB         mregs[0x5a4]
-#define PLUTDATA        mregs[0x5a8]
-#define PDATA           mregs[0x5ac]
-#define ENGAFETCH       mregs[0x5b0]
-#define ENGALEN         mregs[0x5b4]
-#define ENGBFETCH       mregs[0x5b8]
-#define ENGBLEN         mregs[0x5bc]
-#define PAL_EXP         (&mregs[0x5d0])
 
 
 //////////////////////////////////////////////////////////////////////
@@ -833,14 +400,6 @@ unsigned int temp1;
 unsigned int Flag;
 
 
-
-static int HDDX1616, HDDY1616, HDX1616, HDY1616, VDX1616, VDY1616, XPOS1616, YPOS1616, HDX1616_2, HDY1616_2;
-static unsigned int CEL_ORIGIN_VH_VALUE;
-static int8_t TEXEL_FUN_NUMBER;
-static int TEXTURE_WI_START, TEXTURE_HI_START, TEXEL_INCX, TEXEL_INCY;
-static int TEXTURE_WI_LIM, TEXTURE_HI_LIM;
-
-
 void LoadPLUT(unsigned int pnt, int n)
 {
 	int i;
@@ -949,15 +508,6 @@ int _madam_HandleCEL(void)
 			CURRENTCCB += 4;
 		}else
 			CURRENTCCB += 8;
-
-		// Get the VH value for this cel. This is done in case the
-		// cel later decides to use the position as the source of
-		// its VH values in the projector.
-		CEL_ORIGIN_VH_VALUE = (XPOS1616 & 0x1) | ((YPOS1616 & 0x1) << 15);
-
-		//if((CCBFLAGS&CCB_SKIP)&& debug)
-		//	printf("###Cel skipped!!! PDATF=%d PLUTF=%d NCCBF=%d\n",PDATF,PLUTF,NCCBF);
-
 
 		if (CCBFLAGS & CCB_LAST)
 			NEXTCCB = 0;
@@ -1110,19 +660,82 @@ void _madam_KeyPressed(uint8_t* data, unsigned int num)
 }
 
 
+#define _check(what, size, val) \
+for (int i = 0; i < size; i++) { \
+	what[i] = 0; \
+	what[i] = val; \
+	if (what[i] != val) { \
+		mpsoc_log(#what " check failed %i = %x != %x\n", i, what[i], val); \
+	} \
+}
+
 void _madam_Init(uint8_t *memory)
 {
 	int i, j, n;
 
-	ADD = 0;
-	debug = 0;
+	_madam_mpsoc_init(&mpsoc_dev, &madam);
+
 	USECEL = 1;
 	CELCYCLES = 0;
 	Mem = memory;
 
 	bitoper.bitset = 1;
 
-	_madam_mpsoc_init();
+#if 0
+	mpsoc_log("0=%x\n", madam.utils[0]);
+	mpsoc_log("1=%x\n", madam.utils[1]);
+	mpsoc_log("2=%x\n", madam.utils[2]);
+	mpsoc_log("3=%x\n", madam.utils[3]);
+
+	madam.utils[0] = 0x70000000;
+	madam.utils[2] = 16;
+	madam.utils[3] = 0xa5a50000;
+	madam.utils[1] = 0x1;
+
+	uint32_t *u32_mem = (uint32_t *)memory;
+	for (int i = 0; i < 16; i++) {
+		mpsoc_log("mem %x = %x\n", i, u32_mem[i]);
+	}
+
+	mpsoc_abort();
+
+
+	uint8_t *pbsq = PBUSQueue;
+	uint32_t *pbsq32 = (uint32_t *)PBUSQueue;
+
+
+	for (i = 0; i < 2048; i++)
+		mregs[i] = 0;
+
+
+	_check(mregs, 2048, 0x123456ff);
+	_check(PLUT, 32, 0xffff);
+	_check(PBUSQueue, 20, 0xff);
+
+	PLUT[0] = 0x12;
+	PLUT[3] = 0x34;
+
+	mpsoc_log("PLUT[0] = %x\n", PLUT[0]);
+	mpsoc_log("PLUT[3] = %x\n", PLUT[3]);
+
+	pbsq[0] = 0x85;
+	pbsq[3] = 0x44;
+
+	mpsoc_log("pbsq[0] = %x\n", pbsq[0]);
+	mpsoc_log("pbsq[3] = %x\n", pbsq[3]);
+
+	pbsq32[0] = 0x1234abcd;
+
+	mpsoc_log("pbsq32[0] = %x\n", pbsq32[0]);
+	mpsoc_log("pbsq[3] = %x\n", pbsq[0]);
+	mpsoc_log("pbsq[3] = %x\n", pbsq[1]);
+	mpsoc_log("pbsq[3] = %x\n", pbsq[2]);
+	mpsoc_log("pbsq[3] = %x\n", pbsq[3]);
+
+	mpsoc_abort();
+
+#endif
+
 
 	quickDivide_init();
 
@@ -1142,11 +755,6 @@ void _madam_Init(uint8_t *memory)
 #else
 	mregs[000] = 0x01020001; // for ARM soft emu of matrix engine
 #endif
-
-	for (i = 0; i < 32; i++)
-		for (j = 0; j < 8; j++)
-			for (n = 0; n < 4; n++)
-				PSCALAR[j][n][i] = ((i * (j + 1)) >> PDV(n));
 
 	for (i = 0; i < 256; i++) {
 		union pdeco pix1, pix2;
@@ -1259,7 +867,7 @@ unsigned int  readPLUTDATA(unsigned int offset)
 	CELCYCLES += 4;
 	if (PLUTDATA == 0)
 		return 0;
-	
+
 	/* Gameblabla - this causes a compliation issue : To check ! TODO */
 	//return *(uint16_t*)(PLUTDATA + (offset ^ 2));
 	return ((uint16_t*)PAL_EXP)[((offset^2)>>1)];

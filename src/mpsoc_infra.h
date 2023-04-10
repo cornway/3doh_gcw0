@@ -1,6 +1,11 @@
 #ifndef MPSOC_INFRA_H
 #define MPSOC_INFRA_H
 
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
+
 #include "mpsoc_mmap.h"
 
 typedef struct {
