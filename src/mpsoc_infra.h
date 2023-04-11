@@ -1,6 +1,8 @@
 #ifndef MPSOC_INFRA_H
 #define MPSOC_INFRA_H
 
+#ifdef MPSOC
+
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
@@ -23,8 +25,14 @@ void mpsoc_log (const char * format, ...);
 
 void mpsoc_abort (void);
 
+#else
+#define mpsoc_abort() abort()
+#endif
+
 #define mpsoc_assert(x) do { \
     if (!(x)) {mpsoc_abort();} \
 } while (0)
+
+#define mpsoc_log(args ...) printf(args)
 
 #endif /*MPSOC_INFRA_H*/

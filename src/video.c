@@ -9,6 +9,8 @@
 #include "freedo/vdlp.h"
 #include "freedo/_3do_sys.h"
 
+#include <mpsoc_infra.h>
+
 SDL_Surface *screen;
 #ifdef SCALING
 SDL_Surface *rl_screen;
@@ -48,9 +50,9 @@ int videoInit(void)
 #else
 	SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 #endif
-	
+
 	mpsoc_log("Bitdepth is %d\n", BPP);
-	
+
 	#ifdef SCALING
 	rl_screen = SDL_SetVideoMode(0, 0, BPP, flags);
 	screen = SDL_CreateRGBSurface(SDL_HWSURFACE, 320, 240, BPP, 0,0,0,0);
@@ -77,7 +79,7 @@ int videoClose(void)
 		free(frame);
 		frame = NULL;
 	}
-	
+
 	if (screen)
 	{
 		SDL_FreeSurface(screen);
@@ -119,7 +121,7 @@ void videoFlip(void)
 	drawDecimal(getFps(), 0, SCREEN_HEIGHT - FPS_FONT_HEIGHT, (void*)screen->pixels);
 	#endif
 	SDL_UnlockSurface( screen );
-	
+
 	#ifdef SCALING
 	SDL_SoftStretch(screen, NULL, rl_screen, NULL);
 	#if defined(FRAMECONTER) && defined(SCALING)

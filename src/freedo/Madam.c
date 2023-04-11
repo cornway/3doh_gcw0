@@ -1081,8 +1081,6 @@ void _madam_Init(uint8_t *memory)
 	CELCYCLES = 0;
 	Mem = memory;
 
-	bitoper.bitset = 1;
-
 	quickDivide_init();
 
 	MAPPING = 1;

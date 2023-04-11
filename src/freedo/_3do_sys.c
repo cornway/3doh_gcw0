@@ -41,6 +41,8 @@
 #include "sound.h"
 #include "input.h"
 
+#include <mpsoc_infra.h>
+
 static INLINE uint32_t _bswap_3do(uint32_t x)
 {
        return (x >> 24) | ((x >> 8) & 0x0000FF00L) | ((x & 0x0000FF00L) << 8) | (x << 24);

@@ -6,7 +6,7 @@ CC = gcc
 TARGET = 3doh
 CFLAGS = -O0 -std=gnu99 -DSCALING -DHLE_SWI -DDONTPACK
 CFLAGS += -Isrc -Isrc/freedo
-LDFLAGS= -lSDL -lm -lmetal
+LDFLAGS= -lSDL -lm
 
 OBJS = \
 	src/freedo/DiagPort.o\
@@ -29,8 +29,6 @@ OBJS = \
 	src/config.o \
 	src/cuefile.o \
 	src/font/font_drawing.o \
-	src/mpsoc_infra.o \
-	src/mpsoc_mmap.o \
 	src/main.o
 
 ifeq ($(DEBUG),1)
@@ -45,10 +43,13 @@ ifeq ($(FPGA_OFFLOAD),1)
 CFLAGS += -DMPSOC
 OBJS += src/freedo/offload/Madam_offload.o \
 		src/freedo/offload/Madam_offload_setup.o \
-		src/freedo/offload/arm_offload.o
+		src/freedo/offload/arm_offload.o \
+		src/mpsoc_infra.o \
+		src/mpsoc_mmap.o
+LDFLAGS += -lmetal
 else
 OBJS += src/freedo/Madam.o \
-		src/freedo/arm.o 
+		src/freedo/arm.o
 endif
 
 all: $(TARGET)

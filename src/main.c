@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <signal.h>
+
 #include <SDL/SDL.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -49,6 +51,12 @@ static char imageFile[128];
 static int emulation_started = 0;
 #endif
 static int iso_loaded;
+static bool terminate = false;
+
+void sig_handler (int signum)
+{
+	terminate = true;
+}
 
 int initEmu();
 
@@ -71,7 +79,7 @@ void readNvRam(void *pnvram)
 	////////////////
 	// Fill out the volume header.
 	nvramStruct->recordType = 0x01;
-	
+
 	for (x = 0; x < 5; x++)
 		nvramStruct->syncBytes[x] = (char)'Z';
 	nvramStruct->recordVersion = 0x02;
@@ -128,7 +136,7 @@ static inline int mainloop(void)
 	printf("TEST %d\n", loop);
 	#endif
 	videoFlip();
-	
+
 	#if defined(__EMSCRIPTEN__)
 	}
 	#else
@@ -137,7 +145,7 @@ static inline int mainloop(void)
 	synchronize_us();
 	#endif
 	#endif
-	
+
 	#if !defined(__EMSCRIPTEN__)
 	return isexit;
 	#endif
@@ -157,10 +165,10 @@ int main(int argc, char *argv[])
 
 #ifdef MPSOC
 	mpsoc_infra_init();
+	mpsoc_log("Entering main\n");
 #endif
 
-	mpsoc_log("Entering main\n");
-
+	signal(SIGINT, sig_handler);
 	/* Create Display before in case it crashes before that */
 	error = videoInit();
 	mpsoc_assert(error == 0);
@@ -214,7 +222,7 @@ int main(int argc, char *argv[])
 	//io_interface = &emuinterface;
 	soundInit();
 	inputInit();
-	
+
 	iso_loaded = fsOpenIso(imageFile);
 
 	if (!iso_loaded)
@@ -233,7 +241,7 @@ int main(int argc, char *argv[])
 	printf("Emulation started\n");
 	emscripten_set_main_loop(mainloop, 0, 1);
 #else
-	while (!quit) {
+	while (!quit && !terminate) {
 		quit = mainloop();
 	}
 #endif
@@ -247,12 +255,12 @@ got_error:
 	{
 		while(!quit)
 		{
-			while (SDL_PollEvent(&event)) 
+			while (SDL_PollEvent(&event))
 			{
-				switch(event.type) 
+				switch(event.type)
 				{
 					case SDL_KEYDOWN:
-						switch(event.key.keysym.sym) 
+						switch(event.key.keysym.sym)
 						{
 							case SDLK_HOME:
 							case SDLK_3:
@@ -272,20 +280,20 @@ got_error:
 					break;
 				}
 			}
-			
+
 			switch(error)
 			{
 				case 1:
 					print_string("ISO file INVALID or", 0xFFFF, 0, 0, 15, screen->pixels);
 					print_string("can't be read, does not exist...", 0xFFFF, 0, 0, 30, screen->pixels);
-					print_string(imageFile, 0xFFFF, 0, 0, 50, screen->pixels);	
+					print_string(imageFile, 0xFFFF, 0, 0, 50, screen->pixels);
 					print_string("Make sure to use iso or", 0xFFFF, 0, 0, 80, screen->pixels);
 					print_string("iso/cue dumps !", 0xFFFF, 0, 0, 100, screen->pixels);
 				break;
 				case 2:
 					print_string("BIOS file INVALID", 0xFFFF, 0, 0, 15, screen->pixels);
 					print_string("or DOES NOT EXIST !", 0xFFFF, 0, 0, 30, screen->pixels);
-							
+
 					print_string("Make sure to put the bios file in", 0xFFFF, 0, 0, 80, screen->pixels);
 					print_string(home, 0xFFFF, 0, 0, 100, screen->pixels);
 					print_string("as bios.bin, lowercase.", 0xFFFF, 0, 0, 120, screen->pixels);
@@ -307,7 +315,9 @@ got_error:
 	SDL_Quit();
 	_3do_Destroy();
 	fsClose();
+#ifdef MPSOC
 	mpsoc_infra_close();
+#endif
 #else
 
 #endif

@@ -679,8 +679,6 @@ void _madam_Init(uint8_t *memory)
 	CELCYCLES = 0;
 	Mem = memory;
 
-	bitoper.bitset = 1;
-
 #if 0
 	mpsoc_log("0=%x\n", madam.utils[0]);
 	mpsoc_log("1=%x\n", madam.utils[1]);
