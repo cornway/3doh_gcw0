@@ -20,8 +20,10 @@
    John Sammons
    Felix Lazarev
  */
-
+#include <assert.h>
 #include <byteswap.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include "bitop.h"
 #include "arm.h"
@@ -29,17 +31,30 @@
 #define BIT_2_MASK(_x) ((1 << (_x)) - 1)
 #define TRIM_U32(_x) (_x) > 32 ? 32 : (_x) < 1 ? 1 : (_x)
 
-static uint32_t cached_addr;
-static uint32_t cached_data[1];
-static uint8_t *cached_data_ptr = (uint8_t *)cached_data;
+static uint32_t cached_data = 0;
+static uint32_t cached_data_valid = 0;
+static uint32_t cached_bits = 0;
 
-static uint8_t _mem_read8_cached (uint32_t addr)
+static uint32_t _reverse_u32 (uint32_t x, uint32_t bits)
 {
-	if (addr >= cached_addr + sizeof(uint32_t)) {
-		cached_addr = addr & ~0x3;
-		cached_data[0] = __bswap_32(_mem_read32(cached_addr));
+	uint32_t reverse = 0;
+	uint8_t bit = 0;
+	int i;
+	for (i = 0; i < bits; i++) {
+	    bit = x & (1 << i) ? 1 : 0;
+		reverse |= bit << (bits - 1 - i);
 	}
-	return cached_data_ptr[addr & 0x3];
+	return reverse;
+}
+
+static uint32_t read_cached(struct BitReaderBig *bit)
+{
+	if (!cached_data_valid) {
+		uint32_t address = (bit->buf + bit->point) & (~0x3);
+		cached_data = _reverse_u32(_mem_read32(address), 32);
+		cached_data_valid = 1;
+	}
+	return cached_data;
 }
 
 void BitReaderBig_AttachBuffer(struct BitReaderBig *bit, uint32_t buff)
@@ -47,11 +62,18 @@ void BitReaderBig_AttachBuffer(struct BitReaderBig *bit, uint32_t buff)
 	bit->buf      = buff;
 	bit->point    = 0;
 	bit->bitpoint = 0;
-	cached_addr = 0;
+	cached_data_valid = false;
+	cached_bits  = 0;
+	read_cached(bit);
 }
 
 void BitReaderBig_Skip(struct BitReaderBig *bit, uint32_t bits)
 {
+	cached_bits += bits;
+	if (cached_bits >= 0x1f) {
+		cached_bits &= 0x1f;
+		cached_data_valid = 0;
+	}
 	bits         += bit->bitpoint;
 	bit->point   += (bits >> 3);
 	bit->bitpoint = bits & 7;
@@ -61,39 +83,26 @@ uint32_t BitReaderBig_Read(struct BitReaderBig *bit, uint8_t bitrate)
 {
 	int32_t bitcnt;
 	uint32_t retval = 0;
+	uint32_t tmp;
+	uint32_t shift;
+	uint32_t bits = 0;
 
 	bitrate  = TRIM_U32(bitrate);
 	bitcnt = bitrate;
 	if (!bit->buf)
 		return retval;
 
-	if ((8 - bit->bitpoint) > bitrate) {
-		retval    = _mem_read8_cached(bit->buf + bit->point);
-		retval  >>= 8 - bit->bitpoint - bitrate;
-		retval   &= BIT_2_MASK(bitrate);
-		bit->bitpoint += bitrate;
-		return retval;
+	bits = bit->bitpoint + (bit->point & 0x3) * 8;
+	assert(bits < 32);
+
+	retval = read_cached(bit);
+	retval >>= bits;
+	BitReaderBig_Skip(bit, bitrate);
+
+	if (!cached_data_valid) {
+		tmp = read_cached(bit);
+		shift = 32 - bits;
+		retval |= tmp << shift;
 	}
-
-	if (bit->bitpoint) {
-		retval = _mem_read8_cached(bit->buf + bit->point) & BIT_2_MASK(8 - bit->bitpoint);
-		bit->point++;
-		bitcnt -= 8 - bit->bitpoint;
-	}
-
-	while (bitcnt >= 8) {
-		retval <<= 8;
-		retval  |= _mem_read8_cached(bit->buf + bit->point);
-		bit->point++;
-		bitcnt -= 8;
-	}
-
-	if (bitcnt) {
-		retval <<= bitcnt;
-		retval |= _mem_read8_cached(bit->buf + bit->point) >> (8 - bitcnt);
-	}
-
-	bit->bitpoint = bitcnt;
-
-	return retval;
+	return _reverse_u32(retval, bitrate);
 }
