@@ -25,14 +25,16 @@ void mpsoc_log (const char * format, ...);
 
 void mpsoc_abort (void);
 
-#else
+#else /*MPSOC*/
+
 #define mpsoc_abort() abort()
-#endif
+
+#define mpsoc_log(args ...) printf(args)
+
+#endif /*MPSOC*/
 
 #define mpsoc_assert(x) do { \
     if (!(x)) {mpsoc_abort();} \
 } while (0)
-
-#define mpsoc_log(args ...) printf(args)
 
 #endif /*MPSOC_INFRA_H*/

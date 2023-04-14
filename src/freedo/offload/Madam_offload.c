@@ -37,7 +37,7 @@
 #include "mpsoc_infra.h"
 #include "Madam_offload_vars.h"
 
-static struct MADAMDatum madam;
+struct MADAMDatum madam;
 struct BitReaderBig bitoper;
 
 extern int sf;
@@ -733,7 +733,6 @@ void _madam_Init(uint8_t *memory)
 	mpsoc_abort();
 
 #endif
-
 
 	quickDivide_init();
 

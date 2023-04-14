@@ -2,9 +2,10 @@
 FPGA_OFFLOAD ?= 1
 NO_VIDEO ?= 0
 DEBUG ?= 1
+SCALING ?= 0
 CC = gcc
 TARGET = 3doh
-CFLAGS = -O0 -std=gnu99 -DSCALING -DHLE_SWI -DDONTPACK
+CFLAGS = -O0 -std=gnu99 -DHLE_SWI -DDONTPACK
 CFLAGS += -Isrc -Isrc/freedo
 LDFLAGS= -lSDL -lm
 
@@ -15,7 +16,6 @@ OBJS = \
 	src/freedo/frame.o \
 	src/freedo/vdlp.o \
 	src/freedo/_3do_sys.o \
-	src/freedo/bitop.o \
 	src/freedo/DSP.o \
 	src/freedo/Iso.o \
 	src/freedo/SPORT.o \
@@ -31,6 +31,10 @@ OBJS = \
 	src/font/font_drawing.o \
 	src/main.o
 
+ifeq ($(SCALING),1)
+CFLAGS += -DSCALING
+endif
+
 ifeq ($(DEBUG),1)
 CFLAGS += -g
 endif
@@ -44,12 +48,14 @@ CFLAGS += -DMPSOC
 OBJS += src/freedo/offload/Madam_offload.o \
 		src/freedo/offload/Madam_offload_setup.o \
 		src/freedo/offload/arm_offload.o \
+		src/freedo/offload/bitop_offload.o \
 		src/mpsoc_infra.o \
 		src/mpsoc_mmap.o
 LDFLAGS += -lmetal
 else
 OBJS += src/freedo/Madam.o \
-		src/freedo/arm.o
+		src/freedo/arm.o \
+		src/freedo/bitop.o
 endif
 
 all: $(TARGET)
