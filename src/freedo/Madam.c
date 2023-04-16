@@ -21,6 +21,8 @@
    Felix Lazarev
  */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
@@ -1222,10 +1224,34 @@ unsigned int  readPLUTDATA(unsigned int offset)
 	return ((uint16_t*)PAL_EXP)[((offset^2)>>1)];
 }
 
+static uint32_t terminate = 0;
+static uint32_t do_print = 0;
+
 static uint16_t PDEC(uint16_t pixel, uint16_t * amv)
 {
 	union pdeco pix1;
 	uint16_t resamv, pres;
+
+	if ((PRE0 & PRE0_BPP_MASK) != 4) {
+		do_print = 1;
+	}
+
+	if (do_print) {
+		if (terminate == 0) {
+			printf("PLUT +:\n");
+			for (int i = 0; i < 32; i++) {
+				printf("16'h%x\n", PLUT[i]);
+			}
+			printf("PLUT -\n");
+			printf("PRE0 = %x, pdec.plutaCCBbits = %x, pdec.pixelBitsMask = %x\n", PRE0, pdec.plutaCCBbits, pdec.pixelBitsMask);
+			printf("\n\n");
+		}
+		printf("pixel = %x\n", pixel);
+		if (terminate++ > 100) {
+			exit(0);
+		}
+	}
+
 
 	pix1.raw = pixel;
 
@@ -1310,6 +1336,9 @@ static uint16_t PDEC(uint16_t pixel, uint16_t * amv)
 
 	pproj.Transparent = ( ((pres & 0x7fff) == 0x0) & pdec.tmask );
 
+	if (do_print) {
+		printf("amv = %x, pres = %x transparent = %x\n", resamv, pres, pproj.Transparent);
+	}
 	return pres;
 }
 
