@@ -48,6 +48,7 @@ CFLAGS += -DMPSOC
 OBJS += src/freedo/offload/Madam_offload.o \
 		src/freedo/offload/Madam_offload_setup.o \
 		src/freedo/offload/arm_offload.o \
+		src/freedo/offload/arm_offload_setup.o \
 		src/freedo/offload/bitop_offload.o \
 		src/mpsoc_infra.o \
 		src/mpsoc_mmap.o

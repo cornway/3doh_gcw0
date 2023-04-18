@@ -32,7 +32,7 @@ static char *symbol_to_dts (char *dtsnode, const char *symbol_name)
 
     if (NULL == fp) {
         mpsoc_log("Failed to open file %s\n", fpath);
-        return NULL;        
+        return NULL;
     }
 
     if (fgets(buf, sizeof(buf), fp) == NULL) {
@@ -160,7 +160,7 @@ void mpsoc_dev_close(void *dev)
     metal_device_close(dev);
 }
 
-void *mpsoc_dev_io(const void *_dev)
+void *mpsoc_dev_io(const void *_dev, void *newAddr)
 {
     int status;
     uint32_t reg[4];
@@ -184,7 +184,7 @@ void *mpsoc_dev_io(const void *_dev)
     paddr = ((uint64_t)reg[0] << 32) | reg[1];
     psize = ((uint64_t)reg[2] << 32) | reg[3];
 
-    vptr = mpsoc_mmap(paddr, psize);
+    vptr = mpsoc_mmap(paddr, psize, newAddr);
 
     mpsoc_log("mpsoc_dev_io: paddr=%x psize=%x vaddr=%x\n", paddr, psize, vptr);
 

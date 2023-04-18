@@ -44,11 +44,11 @@
 #endif
 
 #include <mpsoc_infra.h>
+#include "arm_offload_setup.h"
 
 extern int fixmode;
 extern int cnbfix;
 
-static int shared_pRam_map_fd = 0;
 
 //extern _ext_Interface io_interface;
 
@@ -562,15 +562,14 @@ uint8_t *_arm_Init(void)
 		RON_CASH[i] = RON_FIQ[i] = 0;
 
 	gSecondROM = 0;
-	pRam = mpsoc_mmap_shared(&shared_pRam_map_fd);
+	pRam = _arm_offload_setup();
+
 	mpsoc_assert(pRam);
 
-
-	//pRam   = malloc(RAMSIZE * sizeof(uint8_t));
 	pRom   = malloc(ROMSIZE * 2 * sizeof(uint8_t));
 	pNVRam = malloc(NVRAMSIZE * sizeof(uint8_t));
 
-	mpsoc_memset( pRam, 0, RAMSIZE);
+	mpsoc_memset32( pRam, 0, RAMSIZE);
 	memset( pRom, 0, ROMSIZE * 2);
 	memset( pNVRam, 0, NVRAMSIZE);
 	gFIQ = false;
@@ -594,7 +593,7 @@ void _arm_Destroy(void)
 
 	free(pNVRam);
 	free(pRom);
-	mpsoc_unmap_shared(shared_pRam_map_fd);
+	_arm_offload_destroy();
 }
 
 void _arm_Reset(void)
@@ -813,10 +812,10 @@ typedef struct TagArg {
 static void decode_swi_lle(void)
 {
 	SPSR[arm_mode_table[0x13]] = CPSR;
-	
+
 	SETI(1);
 	SETM(0x13);
-	
+
 	RON_USER[14] = RON_USER[15];
 	RON_USER[15] = 0x00000008;
 }

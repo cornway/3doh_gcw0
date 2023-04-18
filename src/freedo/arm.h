@@ -36,6 +36,10 @@
 extern "C" {
 #endif
 
+#define DRAM1_SIZE (1 * 1024 * 1024)
+#define DRAM2_SIZE (1 * 1024 * 1024)
+#define VRAM_SIZE (1 * 1024 * 1024)
+
 #ifndef DONTPACK
 #pragma pack(push,1)
 #endif

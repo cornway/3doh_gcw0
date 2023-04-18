@@ -19,7 +19,7 @@ void _madam_mpsoc_init (mpsoc_dev_t *mpsoc_dev, struct MADAMDatum *madam)
 	mpsoc_dev->dev = mpsoc_dev_open("axi_bram_ctrl_mregs");
 	mpsoc_assert(mpsoc_dev->dev != NULL);
 
-	mpsoc_dev->io = mpsoc_dev_io(mpsoc_dev->dev);
+	mpsoc_dev->io = mpsoc_dev_io(mpsoc_dev->dev, NULL);
     void *ioptr = mpsoc_dev->io;
 	mpsoc_assert(ioptr != NULL);
 
@@ -32,5 +32,4 @@ void _madam_mpsoc_init (mpsoc_dev_t *mpsoc_dev, struct MADAMDatum *madam)
 	madam->utils 			= ioptr + 0x10000;
 
 	MadamOffloadVarsInit(ioptr + 0x14000);
-	//MadamOffloadVarsInit(malloc(1024 * 256));
 }

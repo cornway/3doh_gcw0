@@ -19,7 +19,7 @@ int mpsoc_infra_init (void);
 int mpsoc_infra_close (void);
 void *mpsoc_dev_open(const char *dev_name);
 void mpsoc_dev_close(void *dev);
-void *mpsoc_dev_io(const void *_dev);
+void *mpsoc_dev_io(const void *_dev, void *newAddr);
 
 void mpsoc_log (const char * format, ...);
 
