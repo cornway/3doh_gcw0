@@ -38,6 +38,10 @@ void *mpsoc_mmap_shared (int *_fd, size_t size)
     if ((fd  = open("/dev/udmabuf0", O_RDWR | O_SYNC)) != -1) {
         ftruncate(fd, buf_size);
         buf = mmap(NULL, buf_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+        if (MAP_FAILED == buf) {
+            mpsoc_log("mpsoc_mmap failed, errno = %d\n", errno);
+            buf = NULL;
+        }
     }
     *_fd = fd;
     return buf;
@@ -57,8 +61,8 @@ void *mpsoc_mmap (uint64_t paddr, uint64_t psize, void *newAddr)
         vptr = (uint64_t *)mmap(newAddr, psize, PROT_READ|PROT_WRITE, flags, fd_dev_mem, paddr);
         if (MAP_FAILED == vptr) {
             mpsoc_log("mpsoc_mmap failed, errno = %d\n", errno);
-        vptr = NULL;
-    }
+            vptr = NULL;
+        }
     }
     return vptr;
 }

@@ -19,7 +19,7 @@ void *_arm_offload_setup (void)
     void *ioptr = mpsoc_dev.io;
 	mpsoc_assert(ioptr != NULL);
 
-    return ioptr;
+    return dram1;
 	//MadamOffloadVarsInit(malloc(1024 * 256));
 }
 
