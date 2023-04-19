@@ -659,16 +659,6 @@ void _madam_KeyPressed(uint8_t* data, unsigned int num)
 	memset(&PBUSQueue[num], -1, 20 - num);
 }
 
-
-#define _check(what, size, val) \
-for (int i = 0; i < size; i++) { \
-	what[i] = 0; \
-	what[i] = val; \
-	if (what[i] != val) { \
-		mpsoc_log(#what " check failed %i = %x != %x\n", i, what[i], val); \
-	} \
-}
-
 void _madam_Init(uint8_t *memory)
 {
 	int i, j, n;
@@ -678,61 +668,6 @@ void _madam_Init(uint8_t *memory)
 	USECEL = 1;
 	CELCYCLES = 0;
 	Mem = memory;
-
-#if 0
-	mpsoc_log("0=%x\n", madam.utils[0]);
-	mpsoc_log("1=%x\n", madam.utils[1]);
-	mpsoc_log("2=%x\n", madam.utils[2]);
-	mpsoc_log("3=%x\n", madam.utils[3]);
-
-	madam.utils[0] = 0x70000000;
-	madam.utils[2] = 16;
-	madam.utils[3] = 0xa5a50000;
-	madam.utils[1] = 0x1;
-
-	uint32_t *u32_mem = (uint32_t *)memory;
-	for (int i = 0; i < 16; i++) {
-		mpsoc_log("mem %x = %x\n", i, u32_mem[i]);
-	}
-
-	mpsoc_abort();
-
-
-	uint8_t *pbsq = PBUSQueue;
-	uint32_t *pbsq32 = (uint32_t *)PBUSQueue;
-
-
-	for (i = 0; i < 2048; i++)
-		mregs[i] = 0;
-
-
-	_check(mregs, 2048, 0x123456ff);
-	_check(PLUT, 32, 0xffff);
-	_check(PBUSQueue, 20, 0xff);
-
-	PLUT[0] = 0x12;
-	PLUT[3] = 0x34;
-
-	mpsoc_log("PLUT[0] = %x\n", PLUT[0]);
-	mpsoc_log("PLUT[3] = %x\n", PLUT[3]);
-
-	pbsq[0] = 0x85;
-	pbsq[3] = 0x44;
-
-	mpsoc_log("pbsq[0] = %x\n", pbsq[0]);
-	mpsoc_log("pbsq[3] = %x\n", pbsq[3]);
-
-	pbsq32[0] = 0x1234abcd;
-
-	mpsoc_log("pbsq32[0] = %x\n", pbsq32[0]);
-	mpsoc_log("pbsq[3] = %x\n", pbsq[0]);
-	mpsoc_log("pbsq[3] = %x\n", pbsq[1]);
-	mpsoc_log("pbsq[3] = %x\n", pbsq[2]);
-	mpsoc_log("pbsq[3] = %x\n", pbsq[3]);
-
-	mpsoc_abort();
-
-#endif
 
 	quickDivide_init();
 
@@ -859,106 +794,15 @@ uint16_t  mreadh(unsigned int addr)
 #endif
 }
 
-unsigned int  readPLUTDATA(unsigned int offset)
-{
-	CELCYCLES += 4;
-	if (PLUTDATA == 0)
-		return 0;
-
-	/* Gameblabla - this causes a compliation issue : To check ! TODO */
-	//return *(uint16_t*)(PLUTDATA + (offset ^ 2));
-	return ((uint16_t*)PAL_EXP)[((offset^2)>>1)];
-}
-
 static uint16_t PDEC(uint16_t pixel, uint16_t * amv)
 {
-	union pdeco pix1;
-	uint16_t resamv, pres;
+	madam.utils[0x20] = pdec.plutaCCBbits;
+	madam.utils[0x21] = pdec.pixelBitsMask;
+	madam.utils[0x22] = pdec.tmask;
 
-	pix1.raw = pixel;
-
-	switch (PRE0 & PRE0_BPP_MASK) {
-	default:
-		//case 1: // 1 bit
-		//case 2: // 2 bits
-		//case 3: // 4 bits
-		pres = PLUT[(pdec.plutaCCBbits + ((pix1.raw & pdec.pixelBitsMask) * 2)) >> 1];
-		resamv = 0x49;
-		break;
-
-	case 4: // 6 bits
-
-		pres = PLUT[pix1.c6b.c];
-		pres = (pres & 0x7FFF) + (pix1.c6b.pw << 15); //pmode=pix1.c6b.pw; ???
-
-		resamv = 0x49;
-		break;
-
-	case 5: // 8 bits
-
-		if (PRE0 & PRE0_LINEAR) {
-			// (Uncoded 8 bit CEL)
-
-			pres = MAPu8b[pix1.raw & 0xFF];
-
-			resamv = 0x49;
-		} else {
-			// (Coded 8 bit CEL)
-
-			pres = PLUT[pix1.c8b.c];
-
-			resamv = MAPc8bAMV[pix1.raw & 0xFF];
-		}
-		break;
-
-	case 6: // 16 bits
-	case 7:
-		//*amv=0;
-		//pres=0;
-		//Transparent=0;
-		if ((PRE0 & PRE0_LINEAR)) {
-			// (Uncoded 16 bit CEL)
-
-			pres = pix1.raw;
-			//pres&=0x7ffe;
-
-			//pres=0x11;
-			// pres=(pres&0x7fff)+(pix1.u16b.p<<15);//pmode=pix1.u16b.p; ???
-			resamv = 0x49;
-
-		} else {
-			// (Coded 16 bit CEL)
-
-			pres = PLUT[pix1.c16b.c];
-			pres = (pres & 0x7fff) | (pixel & 0x8000);
-			resamv = MAPc16bAMV[(pix1.raw >> 5) & 0x1FF];
-			//nop: pres=(pres&0x7fff)+(pix1.c16b.pw<<15);//pmode=pix1.c16b.pw; ???
-		}
-
-		break;
-	}
-
-	*amv = resamv;
-
-	// (Conceptual end of DECODER)
-
-	//////////////////////
-	// TODO: Do PROJECTOR functions now?
-	// They'll be done before using the PROCESSOR.
-
-
-
-	//if(!(PRE1&PRE1_NOSWAP) && (CCBCTL0&(1<<27)))
-	//			pres=(pres&0x7ffe)|((pres&0x8000)>>15)|((pres&1)<<15);
-
-	//if(!(CCBCTL0&0x80000000))pres=(pres&0x7fff)|((CCBCTL0>>15)&0x8000);
-
-	//pres=(pres|pdec.pmodeORmask)&pdec.pmodeANDmask;
-
-
-	pproj.Transparent = ( ((pres & 0x7fff) == 0x0) & pdec.tmask );
-
-	return pres;
+	pproj.Transparent = madam.utils[0x25] & 0x1;
+	*amv = (madam.utils[0x24] >> 16) & 0xffff;
+	return (madam.utils[0x24] >> 0) & 0xffff;
 }
 
 unsigned int * _madam_GetRegs(void)
