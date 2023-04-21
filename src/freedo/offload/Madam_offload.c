@@ -734,12 +734,8 @@ static INLINE uint16_t readPixelLR(uint32_t src, int x, int y, int offset)
 
 static INLINE void writeFramebufferPixel(uint32_t src, int x, int y, uint16_t pix)
 {
-	src += XY2OFF((x << 2), y, WMOD);
-	#ifdef MSB_FIRST
-		*((uint16_t*)&Mem[src]) = pix;
-	#else
-		*((uint16_t*)&Mem[src ^ 2]) = pix;
-	#endif
+	madam.utils[0x40] = (x&0xffff) | ((y&0xffff) << 16);
+	madam.utils[0x41] = pix;
 }
 
 unsigned int  mread(unsigned int addr)
