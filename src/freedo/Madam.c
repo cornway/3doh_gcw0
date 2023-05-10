@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 #include "retro_inline.h"
 
 #include "Madam.h"
@@ -37,6 +38,9 @@
 #include "bitop.h"
 
 #include "mpsoc_infra.h"
+
+void WriteSimSVH(const char *name, bool write_zeros);
+void DumpMem(const char *name);
 
 struct BitReaderBig bitoper;
 
@@ -415,6 +419,8 @@ uint32_t PXOR1, PXOR2;
 #define FIXP16_WP_MASK   0xffff0000
 #define FIXP16_ROUND_UP  0x0000ffff //0x8000
 
+
+static uint32_t do_print = 0;
 
 
 // TYPES ///////////////////////////////////////////////////////////////////
@@ -1157,6 +1163,9 @@ static INLINE void writeFramebufferPixel(uint32_t src, int x, int y, uint16_t pi
 	#ifdef MSB_FIRST
 		*((uint16_t*)&Mem[src]) = pix;
 	#else
+		if (do_print) {
+			printf("32'h%x //x = %x, y = %x pix = %x\n", (src^2) - FBTARGET, x, y, pix);
+		}
 		*((uint16_t*)&Mem[src ^ 2]) = pix;
 	#endif
 }
@@ -1218,40 +1227,16 @@ unsigned int  readPLUTDATA(unsigned int offset)
 	CELCYCLES += 4;
 	if (PLUTDATA == 0)
 		return 0;
-	
+
 	/* Gameblabla - this causes a compliation issue : To check ! TODO */
 	//return *(uint16_t*)(PLUTDATA + (offset ^ 2));
 	return ((uint16_t*)PAL_EXP)[((offset^2)>>1)];
 }
 
-static uint32_t terminate = 0;
-static uint32_t do_print = 0;
-
 static uint16_t PDEC(uint16_t pixel, uint16_t * amv)
 {
 	union pdeco pix1;
 	uint16_t resamv, pres;
-
-	if ((PRE0 & PRE0_BPP_MASK) != 4) {
-		do_print = 1;
-	}
-
-	if (do_print) {
-		if (terminate == 0) {
-			printf("PLUT +:\n");
-			for (int i = 0; i < 32; i++) {
-				printf("16'h%x\n", PLUT[i]);
-			}
-			printf("PLUT -\n");
-			printf("PRE0 = %x, pdec.plutaCCBbits = %x, pdec.pixelBitsMask = %x\n", PRE0, pdec.plutaCCBbits, pdec.pixelBitsMask);
-			printf("\n\n");
-		}
-		printf("pixel = %x\n", pixel);
-		if (terminate++ > 100) {
-			exit(0);
-		}
-	}
-
 
 	pix1.raw = pixel;
 
@@ -1336,9 +1321,6 @@ static uint16_t PDEC(uint16_t pixel, uint16_t * amv)
 
 	pproj.Transparent = ( ((pres & 0x7fff) == 0x0) & pdec.tmask );
 
-	if (do_print) {
-		printf("amv = %x, pres = %x transparent = %x\n", resamv, pres, pproj.Transparent);
-	}
 	return pres;
 }
 
@@ -1346,6 +1328,15 @@ unsigned int * _madam_GetRegs(void)
 {
 	return mregs;
 }
+
+#define DEBUG_DRAW_LIT_FUN_0 0
+#define DEBUG_DRAW_LIT_FUN_1 0
+#define DEBUG_DRAW_LIT_FUN_2 0
+
+
+#define DEBUG_DRAW_PACK_FUN_0 0
+
+#define _min(a, b) ((a) < (b) ? (a) : (b))
 
 void  DrawPackedCel_New(void)
 {
@@ -1379,6 +1370,13 @@ void  DrawPackedCel_New(void)
 
 	if (TEXEL_FUN_NUMBER == 0) {
 		//return;
+
+#if DEBUG_DRAW_PACK_FUN_0
+		do_print = 1;
+		WriteSimSVH("./draw_pack_0_cel_setup.svh", true);
+		DumpMem("./draw_pack_0_before.bin");
+#endif
+
 		for (currentrow = 0; currentrow < (TEXTURE_HI_LIM); currentrow++) {
 			int scipw, wcnt;
 
@@ -1472,6 +1470,12 @@ void  DrawPackedCel_New(void)
 			start = lastaddr;
 
 		}
+
+#if DEBUG_DRAW_PACK_FUN_0
+		DumpMem("./draw_pack_0_after.bin");
+		exit(0);
+#endif
+
 	} else if (TEXEL_FUN_NUMBER == 1) {
 		int drawHeight;
 
@@ -1682,32 +1686,58 @@ void  DrawLiteralCel_New(void)
 	{
 		int i;
 
+#if DEBUG_DRAW_LIT_FUN_0
+		do_print = 1;
+		WriteSimSVH("./draw_literal_0_cel_setup.svh", true);
+		DumpMem("./draw_literal_0_before.bin");
+
+#if 0
+		#include <sys/time.h>
+		#include <unistd.h>
+
+		struct timeval start, end;
+
+		gettimeofday(&start, NULL);
+
+#endif
+#endif /*DEBUG_DRAW_LIT_FUN_0*/
+
 		//  if(speedfixes>=0&&speedfixes<=100001)   speedfixes=300000;
 		sdf = 100000;
-		//øðèôòû NFS
+		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ NFS
 		SPRWI -= ((PRE0 >> 24) & 0xf);
-		xvert += TEXTURE_HI_START * VDX1616;
-		yvert += TEXTURE_HI_START * VDY1616;
+		xvert += TEXTURE_HI_START * VDX1616 + TEXTURE_WI_START * HDX1616;
+		yvert += TEXTURE_HI_START * VDY1616 + TEXTURE_WI_START * HDY1616;
 		PDATA += ((offset + 2) << 2) * TEXTURE_HI_START;
 		if (SPRWI > TEXTURE_WI_LIM) SPRWI = TEXTURE_WI_LIM;
 		for (i = TEXTURE_HI_START; i < TEXTURE_HI_LIM; i++) {
 
 			BitReaderBig_AttachBuffer(&bitoper, PDATA);
 			BITCALC = ((offset + 2) << 2) << 5;
-			xcur = xvert + TEXTURE_WI_START * HDX1616;
-			ycur = yvert + TEXTURE_WI_START * HDY1616;
+
 			BitReaderBig_Skip(&bitoper, bpp * (((PRE0 >> 24) & 0xf)));
 			if (TEXTURE_WI_START)
 				BitReaderBig_Skip(&bitoper, bpp * (TEXTURE_WI_START));
 
+			TexelDraw_BitmapRow(LAMV, xvert, yvert, SPRWI - TEXTURE_WI_START);
 			xvert += VDX1616;
 			yvert += VDY1616;
 
-			TexelDraw_BitmapRow(LAMV, xcur, ycur, SPRWI - TEXTURE_WI_START);
-
 			PDATA += (offset + 2) << 2;
-
+			do_print = 0;
 		}
+
+#if 0
+		gettimeofday(&end, NULL);
+		struct timeval timediff;
+		timersub(&end, &start, &timediff);
+		printf("time spent : %ld sec %ld usec\n", timediff.tv_sec, timediff.tv_usec);
+#endif
+#if DEBUG_DRAW_LIT_FUN_0
+		DumpMem("./draw_literal_0_after.bin");
+		exit(0);
+
+#endif
 	}
 	break;
 	case 1:
@@ -1721,14 +1751,19 @@ void  DrawLiteralCel_New(void)
 		if (CCBFLAGS & CCB_MARIA && drawHeight > (1 << 16))
 			drawHeight = (1 << 16);
 
+#if DEBUG_DRAW_LIT_FUN_1
+		DumpMem("./draw_literal_1_before.bin");
+		WriteSimSVH("./draw_literal_1_cel_setup.svh", true);
+
+		do_print = 1;
+#endif
 		for (i = 0; i < SPRHI; i++) {
 
 			BitReaderBig_AttachBuffer(&bitoper, PDATA);
 			BITCALC = ((offset + 2) << 2) << 5;
 			xcur = xvert;
 			ycur = yvert;
-			xvert += VDX1616;
-			yvert += VDY1616;
+
 			BitReaderBig_Skip(&bitoper, bpp * (((PRE0 >> 24) & 0xf)));
 
 
@@ -1745,9 +1780,15 @@ void  DrawLiteralCel_New(void)
 				ycur += HDY1616;
 
 			}
+			xvert += VDX1616;
+			yvert += VDY1616;
 			PDATA += (offset + 2) << 2;
 
 		}
+#if DEBUG_DRAW_LIT_FUN_1
+		DumpMem("./draw_literal_1_after.bin");
+		exit(0);
+#endif
 	}
 	break;
 	default:
@@ -2222,10 +2263,16 @@ void TexelDraw_BitmapRow(uint16_t LAMV, int xcur, int ycur, int cnt)
 	int x;
 	unsigned pixel, framePixel = 0;
 
+
 	int xp = xcur >> 16;
 	int yp = ycur >> 16;
 	const int hdx = HDX1616 >> 16;
 	const int hdy = HDY1616 >> 16;
+
+	if (do_print) {
+		printf("TexelDraw_BitmapRow: xcur=%x ycur=%x cn=%d\n", xcur, ycur, cnt);
+		printf("HDX1616 = %x, HDY1616 = %x WMOD= %x, FBTARGET= %x\n", HDX1616, HDY1616, WMOD, FBTARGET);
+	}
 	for (x = 0; x < cnt; x++, xp += hdx, yp += hdy) {
 		uint16_t CURPIX = PDEC(BitReaderBig_Read(&bitoper, bpp), &LAMV);
 		if (!pproj.Transparent) {
@@ -2265,6 +2312,9 @@ int  TexelDraw_Scale(uint16_t CURPIX, uint16_t LAMV, int xcur, int ycur, int del
 
 	if (xcur == deltax)
 		return 0;
+
+	if (do_print)
+		printf("TexelDraw_Scale: xcur=%x ycur=%x, deltax=%x, deltay=%x\n", xcur, ycur, deltax, deltay);
 
 	for (y = ycur; y != deltay; y += TEXEL_INCY)
 		for (x = xcur; x != deltax; x += TEXEL_INCX)
@@ -2408,4 +2458,124 @@ int  TexelDraw_Arbitrary(uint16_t CURPIX, uint16_t LAMV,
 		}
 	}
 	return 0;
+}
+
+void PrintReg(FILE *fd, const char *op_name, const char *id_name, int32_t val)
+{
+	fprintf(fd, "    mcoreClass.%s(%s, 32'h%x);\n", op_name, id_name, val);
+}
+
+#define PRINT_CEL_VAR_INT(_fd, _id) \
+PrintReg(_fd, "set_cel_int_var", #_id"_ID", _id)
+
+#define PRINT_CEL_VAR_UINT(_fd, _id) \
+PrintReg(_fd, "set_cel_uint_var", #_id"_ID", _id)
+
+#define PRINT_PDEC(_fd, _pdec) \
+do { \
+fprintf(_fd, "/*Setup PDEC begin*/\n"); \
+PrintReg(_fd, "set_utils_reg", "32'h20", _pdec.plutaCCBbits); \
+PrintReg(_fd, "set_utils_reg", "32'h21", _pdec.pixelBitsMask); \
+PrintReg(_fd, "set_utils_reg", "32'h22", _pdec.tmask); \
+fprintf(_fd, "/*Setup PDEC end*/\n"); \
+} while (0)
+
+void PrintCelVars(FILE *fd)
+{
+	uint32_t bpp = BPP[PRE0 & PRE0_BPP_MASK];
+
+	fprintf(fd, "/*Cel Vars setup begin*/\n");
+
+	PRINT_CEL_VAR_INT(fd, HDDX1616);
+	PRINT_CEL_VAR_INT(fd, HDDY1616);
+	PRINT_CEL_VAR_INT(fd, HDX1616);
+	PRINT_CEL_VAR_INT(fd, HDY1616);
+	PRINT_CEL_VAR_INT(fd, VDX1616);
+	PRINT_CEL_VAR_INT(fd, VDY1616);
+	PRINT_CEL_VAR_INT(fd, XPOS1616);
+	PRINT_CEL_VAR_INT(fd, YPOS1616);
+	PRINT_CEL_VAR_INT(fd, HDX1616_2);
+	PRINT_CEL_VAR_INT(fd, HDY1616_2);
+	PRINT_CEL_VAR_INT(fd, TEXTURE_WI_START);
+	PRINT_CEL_VAR_INT(fd, TEXTURE_HI_START);
+	PRINT_CEL_VAR_INT(fd, TEXEL_INCX);
+	PRINT_CEL_VAR_INT(fd, TEXEL_INCY);
+	PRINT_CEL_VAR_INT(fd, TEXTURE_WI_LIM);
+	PRINT_CEL_VAR_INT(fd, TEXTURE_HI_LIM);
+	PRINT_CEL_VAR_INT(fd, TEXEL_FUN_NUMBER);
+	PRINT_CEL_VAR_INT(fd, SPRWI);
+	PRINT_CEL_VAR_INT(fd, SPRHI);
+	PRINT_CEL_VAR_INT(fd, BITCALC);
+
+	PRINT_CEL_VAR_UINT(fd, BITADDR);
+	PRINT_CEL_VAR_UINT(fd, BITBUFLEN);
+	PRINT_CEL_VAR_UINT(fd, BITBUF);
+	PRINT_CEL_VAR_UINT(fd, CCBFLAGS);
+	PRINT_CEL_VAR_UINT(fd, PIXC);
+	PRINT_CEL_VAR_UINT(fd, PRE0);
+	PRINT_CEL_VAR_UINT(fd, PRE1);
+	PRINT_CEL_VAR_UINT(fd, TARGETPROJ);
+	PRINT_CEL_VAR_UINT(fd, SRCDATA);
+	PRINT_CEL_VAR_UINT(fd, PLUTF);
+	PRINT_CEL_VAR_UINT(fd, PDATF);
+	PRINT_CEL_VAR_UINT(fd, NCCBF);
+	PRINT_CEL_VAR_UINT(fd, PXOR1);
+	PRINT_CEL_VAR_UINT(fd, PXOR2);
+	fprintf(fd, "/*Cel Vars setup end*/\n");
+}
+
+void PrintMregs(FILE *fd, bool write_zeros)
+{
+	fprintf(fd, "\n\n/*Setup mregs begin*/\n");
+	for (int i = 0; i < 2048; i++) {
+		if (mregs[i] != 0 || write_zeros)
+			fprintf(fd, "    mcoreClass.set_mregs(32'h%x, 32'h%x);\n", i, mregs[i]);
+	}
+
+	fprintf(fd, "    mcoreClass.set_wmod(32'h%x);\n", WMOD);
+	fprintf(fd, "\n\n/*Setup mregs end*/\n");
+}
+
+void PrintPLUT(FILE *fd)
+{
+	fprintf(fd, "logic [15:0] PLUT [32] = '{\n");
+	for (int i =0; i < 31; i++) {
+		fprintf(fd, "    16'h%x,\n", PLUT[i]);
+	}
+	fprintf(fd, "    16'h%x\n", PLUT[31]);
+	fprintf(fd, "};\n\n");
+}
+
+void _WriteSimSVH(FILE *fd, bool write_zeros)
+{
+	fprintf(fd, "\n\n");
+	PrintPLUT(fd);
+
+	fprintf(fd, "task automatic setup_cel_core(ref McoreRegs_t mcoreClass);\n");
+	PrintCelVars(fd);
+	PrintMregs(fd, write_zeros);
+	PRINT_PDEC(fd, pdec);
+	fprintf(fd, "    mcoreClass.load_plut(PLUT);\n");
+	fprintf(fd, "endtask");
+	fprintf(fd, "\n\n");
+}
+
+void WriteSimSVH(const char *name, bool write_zeros)
+{
+	FILE *fd = fopen(name, "w+");
+	assert(fd);
+
+	_WriteSimSVH(fd, write_zeros);
+
+	fclose(fd);
+}
+
+void DumpMem(const char *name)
+{
+	FILE *fd;
+
+	fd = fopen(name, "w+");
+	assert(fd);
+	fwrite(Mem, 0x300000, 1, fd);
+	fclose(fd);
 }
