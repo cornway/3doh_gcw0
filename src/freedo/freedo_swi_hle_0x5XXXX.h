@@ -10,7 +10,7 @@
 static
 INLINE
 void
-freedo_swi_hle_0x50000(void     *ram_,
+freedo_swi_hle_0x50000(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_)
@@ -30,7 +30,7 @@ freedo_swi_hle_0x50000(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50001(void     *ram_,
+freedo_swi_hle_0x50001(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_)
@@ -50,7 +50,7 @@ freedo_swi_hle_0x50001(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50002(void     *ram_,
+freedo_swi_hle_0x50002(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_,
@@ -73,7 +73,7 @@ freedo_swi_hle_0x50002(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50003(void    *ram_,
+freedo_swi_hle_0x50003(uint8_t   *ram_,
                        uint8_t  r0_,
                        uint8_t  r1_,
                        uint8_t  r2_)
@@ -85,7 +85,7 @@ freedo_swi_hle_0x50003(void    *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50004(void     *ram_,
+freedo_swi_hle_0x50004(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_,
@@ -98,7 +98,7 @@ freedo_swi_hle_0x50004(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50005(void     *ram_,
+freedo_swi_hle_0x50005(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_,
@@ -121,7 +121,7 @@ freedo_swi_hle_0x50005(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50006(void     *ram_,
+freedo_swi_hle_0x50006(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_,
@@ -144,7 +144,7 @@ freedo_swi_hle_0x50006(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50007(void     *ram_,
+freedo_swi_hle_0x50007(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_)
@@ -164,7 +164,7 @@ freedo_swi_hle_0x50007(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50008(void     *ram_,
+freedo_swi_hle_0x50008(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_)
@@ -184,7 +184,7 @@ freedo_swi_hle_0x50008(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50009(void     *ram_,
+freedo_swi_hle_0x50009(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_,
@@ -207,7 +207,7 @@ freedo_swi_hle_0x50009(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x5000A(void     *ram_,
+freedo_swi_hle_0x5000A(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_)
@@ -219,7 +219,7 @@ freedo_swi_hle_0x5000A(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x5000B(void     *ram_,
+freedo_swi_hle_0x5000B(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_,
@@ -232,7 +232,7 @@ freedo_swi_hle_0x5000B(void     *ram_,
 static
 INLINE
 uint32_t
-freedo_swi_hle_0x5000C(void     *ram_,
+freedo_swi_hle_0x5000C(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_)
 {
@@ -249,7 +249,7 @@ freedo_swi_hle_0x5000C(void     *ram_,
 static
 INLINE
 uint32_t
-freedo_swi_hle_0x5000D(void     *ram_,
+freedo_swi_hle_0x5000D(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_)
 {
@@ -266,7 +266,7 @@ freedo_swi_hle_0x5000D(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x5000E(void     *ram_,
+freedo_swi_hle_0x5000E(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_)
@@ -286,7 +286,7 @@ freedo_swi_hle_0x5000E(void     *ram_,
 static
 INLINE
 uint32_t
-freedo_swi_hle_0x5000F(void     *ram_,
+freedo_swi_hle_0x5000F(uint8_t   *ram_,
                        uint32_t  r0_)
 {
   vec3f16 *vec;
@@ -300,7 +300,7 @@ freedo_swi_hle_0x5000F(void     *ram_,
 static
 INLINE
 uint32_t
-freedo_swi_hle_0x50010(void     *ram_,
+freedo_swi_hle_0x50010(uint8_t   *ram_,
                        uint32_t  r0_)
 {
   vec4f16 *vec;
@@ -314,7 +314,7 @@ freedo_swi_hle_0x50010(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50011(void     *ram_,
+freedo_swi_hle_0x50011(uint8_t   *ram_,
                        uint32_t  r0_,
                        uint32_t  r1_,
                        uint32_t  r2_,
@@ -337,7 +337,7 @@ freedo_swi_hle_0x50011(void     *ram_,
 static
 INLINE
 void
-freedo_swi_hle_0x50012(void     *ram_,
+freedo_swi_hle_0x50012(uint8_t   *ram_,
                        uint32_t  r0_)
 {
   vec3f16  *dest;

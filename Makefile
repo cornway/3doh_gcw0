@@ -3,9 +3,9 @@ FPGA_OFFLOAD ?= 0
 NO_VIDEO ?= 0
 DEBUG ?= 1
 SCALING ?= 0
-CC = gcc
+CXX = g++
 TARGET = 3doh
-CFLAGS = -O0 -std=gnu99 -DHLE_SWI -DDONTPACK
+CFLAGS = -O0 -DHLE_SWI -DDONTPACK
 CFLAGS += -Isrc -Isrc/freedo
 LDFLAGS= -lSDL -lm
 
@@ -55,7 +55,10 @@ LDFLAGS += -lmetal
 else
 OBJS += src/freedo/Madam.o \
 		src/freedo/arm.o \
-		src/freedo/bitop.o
+		src/freedo/bitop.o \
+		src/sim/simdata.o
+
+CFLAGS += -Isrc/sim
 endif
 
 all: $(TARGET)
@@ -64,13 +67,13 @@ rm-elf:
 	-rm -f $(TARGET) $(OBJS)
 
 $(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
+	$(CXX) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@
 
 %.o: %.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -r $(OBJS) $(TARGET)

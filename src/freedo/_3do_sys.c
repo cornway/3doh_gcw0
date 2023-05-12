@@ -137,7 +137,7 @@ struct VDLFrame *curr_frame;
 bool skipframe;
 int count_samples = 0;
 
-static void *swapFrame(void *curr_frame)
+static struct VDLFrame *swapFrame(struct VDLFrame *curr_frame)
 {
 	return curr_frame;
 }
@@ -211,6 +211,7 @@ void _3do_Destroy()
 {
 	_arm_Destroy();
 	_xbus_Destroy();
+	_madam_Destroy();
 }
 
 uint32_t _3do_SaveSize(void)

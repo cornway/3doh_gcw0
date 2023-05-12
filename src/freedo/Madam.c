@@ -39,8 +39,15 @@
 
 #include "mpsoc_infra.h"
 
+#include <simdata.hpp>
+
+SimFactory *simFactory;
+
 void WriteSimSVH(const char *name, bool write_zeros);
+void WriteSimSVH_CheckRegs(const char *name);
 void DumpMem(const char *name);
+bool AddSimData(std::string test_name);
+bool AddVerificationData(std::string test_name);
 
 struct BitReaderBig bitoper;
 
@@ -420,7 +427,7 @@ uint32_t PXOR1, PXOR2;
 #define FIXP16_ROUND_UP  0x0000ffff //0x8000
 
 
-static uint32_t do_print = 0;
+static bool do_print = 0;
 
 
 // TYPES ///////////////////////////////////////////////////////////////////
@@ -1079,6 +1086,7 @@ void _madam_KeyPressed(uint8_t* data, unsigned int num)
 }
 
 
+//
 void _madam_Init(uint8_t *memory)
 {
 	int i, j, n;
@@ -1088,6 +1096,8 @@ void _madam_Init(uint8_t *memory)
 	USECEL = 1;
 	CELCYCLES = 0;
 	Mem = memory;
+
+	simFactory = new SimFactory("draw_literal_0", 10);
 
 	quickDivide_init();
 
@@ -1137,6 +1147,11 @@ void _madam_Init(uint8_t *memory)
 	}
 }
 
+void _madam_Destroy(void)
+{
+	delete simFactory;
+}
+
 extern void _3do_InternalFrame(int cycles);
 
 void exteraclocker(void)
@@ -1164,7 +1179,7 @@ static INLINE void writeFramebufferPixel(uint32_t src, int x, int y, uint16_t pi
 		*((uint16_t*)&Mem[src]) = pix;
 	#else
 		if (do_print) {
-			printf("32'h%x //x = %x, y = %x pix = %x\n", (src^2) - FBTARGET, x, y, pix);
+			printf("32'h%x //x = %x, y = %x pix = %x\n", (src^2), x, y, pix);
 		}
 		*((uint16_t*)&Mem[src ^ 2]) = pix;
 	#endif
@@ -1329,13 +1344,6 @@ unsigned int * _madam_GetRegs(void)
 	return mregs;
 }
 
-#define DEBUG_DRAW_LIT_FUN_0 0
-#define DEBUG_DRAW_LIT_FUN_1 0
-#define DEBUG_DRAW_LIT_FUN_2 0
-
-
-#define DEBUG_DRAW_PACK_FUN_0 0
-
 #define _min(a, b) ((a) < (b) ? (a) : (b))
 
 void  DrawPackedCel_New(void)
@@ -1371,11 +1379,7 @@ void  DrawPackedCel_New(void)
 	if (TEXEL_FUN_NUMBER == 0) {
 		//return;
 
-#if DEBUG_DRAW_PACK_FUN_0
-		do_print = 1;
-		WriteSimSVH("./draw_pack_0_cel_setup.svh", true);
-		DumpMem("./draw_pack_0_before.bin");
-#endif
+		do_print = AddSimData("draw_packed_0");
 
 		for (currentrow = 0; currentrow < (TEXTURE_HI_LIM); currentrow++) {
 			int scipw, wcnt;
@@ -1383,8 +1387,8 @@ void  DrawPackedCel_New(void)
 			BitReaderBig_AttachBuffer(&bitoper, start);
 			offset = BitReaderBig_Read(&bitoper, offsetl << 3);
 
-			//BITCALC=((offset+2)<<2)<<5;
 			lastaddr = start + ((offset + 2) << 2);
+
 			eor = 0;
 			xcur = xvert;
 			ycur = yvert;
@@ -1397,29 +1401,32 @@ void  DrawPackedCel_New(void)
 				continue;
 			}
 			scipw = TEXTURE_WI_START;
-			wcnt  = scipw;
+			wcnt  = TEXTURE_WI_START;
 
 			while (!eor) {//while not end of row
 
 				const int header = BitReaderBig_Read(&bitoper, 8);
 				type = (header >> 6) & 3;
-				if ( (int)(bitoper.point + start) >= (lastaddr)) type = 0;
 				pixcount = (header & 63) + 1;
 
+				if ( (int)(bitoper.point + start) >= (lastaddr))
+					eor = 1;
+
 				if (scipw) {
-					if (type == 0) break;
+					if (eor)
+						break;
+					xcur += HDX1616 * _min(scipw, pixcount);
+					ycur += HDY1616 * _min(scipw, pixcount);
+
 					if (scipw >= (int)(pixcount)) {
 						scipw -= (pixcount);
-						if (HDX1616) xcur += HDX1616 * (pixcount);
-						if (HDY1616) ycur += HDY1616 * (pixcount);
+
 						if (type == 1)
 							BitReaderBig_Skip(&bitoper, bpp * pixcount);
 						else if (type == 3)
 							BitReaderBig_Skip(&bitoper, bpp);
 						continue;
 					} else {
-						if (HDX1616) xcur += HDX1616 * (scipw);
-						if (HDY1616) ycur += HDY1616 * (scipw);
 						pixcount -= scipw;
 						if (type == 1)
 							BitReaderBig_Skip(&bitoper, bpp * scipw);
@@ -1438,43 +1445,23 @@ void  DrawPackedCel_New(void)
 					break;
 				case 1: //PACK_LITERAL
 					TexelDraw_BitmapRow(LAMV, xcur, ycur, pixcount);
-					if (HDX1616) xcur += HDX1616 * (pixcount);
-					if (HDY1616) ycur += HDY1616 * (pixcount);
-
-					break;
-				case 2: //PACK_TRANSPARENT
-					//	calcx+=(pixcount+1);
-					if (HDX1616) xcur += HDX1616 * (pixcount);
-					if (HDY1616) ycur += HDY1616 * (pixcount);
-
 					break;
 				case 3: //PACK_REPEAT
 					CURPIX = PDEC(BitReaderBig_Read(&bitoper, bpp), &LAMV);
-					if (CURPIX > 32300 && CURPIX < 33500 && (CURPIX > 32760 || CURPIX < 32750)) {
-						if (speedfixes >= 0 && sdf == 0 && speedfixes <= 200001 && unknownflag11 == 0) speedfixes = 200000;
-					}
-					if (unknownflag11 > 0 && sdf == 0 && CURPIX < 30000 && CURPIX > 29000) speedfixes = -200000;
 					if (!pproj.Transparent) {
-
 						TexelDraw_Line(CURPIX, LAMV, xcur, ycur, (pixcount));
-
 					}
-					if (HDX1616) xcur += HDX1616 * (pixcount);
-					if (HDY1616) ycur += HDY1616 * (pixcount);
-
 					break;
 				}       //type
+				xcur += HDX1616 * (pixcount);
+				ycur += HDY1616 * (pixcount);
 				if (wcnt >= TEXTURE_WI_LIM) break;
 			}               //eor
 
 			start = lastaddr;
 
 		}
-
-#if DEBUG_DRAW_PACK_FUN_0
-		DumpMem("./draw_pack_0_after.bin");
-		exit(0);
-#endif
+		AddVerificationData("draw_packed_0");
 
 	} else if (TEXEL_FUN_NUMBER == 1) {
 		int drawHeight;
@@ -1685,22 +1672,7 @@ void  DrawLiteralCel_New(void)
 	case 0:
 	{
 		int i;
-
-#if DEBUG_DRAW_LIT_FUN_0
-		do_print = 1;
-		WriteSimSVH("./draw_literal_0_cel_setup.svh", true);
-		DumpMem("./draw_literal_0_before.bin");
-
-#if 0
-		#include <sys/time.h>
-		#include <unistd.h>
-
-		struct timeval start, end;
-
-		gettimeofday(&start, NULL);
-
-#endif
-#endif /*DEBUG_DRAW_LIT_FUN_0*/
+		do_print = AddSimData("draw_literal_0");
 
 		//  if(speedfixes>=0&&speedfixes<=100001)   speedfixes=300000;
 		sdf = 100000;
@@ -1724,20 +1696,8 @@ void  DrawLiteralCel_New(void)
 			yvert += VDY1616;
 
 			PDATA += (offset + 2) << 2;
-			do_print = 0;
 		}
-
-#if 0
-		gettimeofday(&end, NULL);
-		struct timeval timediff;
-		timersub(&end, &start, &timediff);
-		printf("time spent : %ld sec %ld usec\n", timediff.tv_sec, timediff.tv_usec);
-#endif
-#if DEBUG_DRAW_LIT_FUN_0
-		DumpMem("./draw_literal_0_after.bin");
-		exit(0);
-
-#endif
+		AddVerificationData("draw_literal_0");
 	}
 	break;
 	case 1:
@@ -1751,12 +1711,9 @@ void  DrawLiteralCel_New(void)
 		if (CCBFLAGS & CCB_MARIA && drawHeight > (1 << 16))
 			drawHeight = (1 << 16);
 
-#if DEBUG_DRAW_LIT_FUN_1
-		DumpMem("./draw_literal_1_before.bin");
-		WriteSimSVH("./draw_literal_1_cel_setup.svh", true);
 
-		do_print = 1;
-#endif
+		do_print = AddSimData("draw_literal_1");
+
 		for (i = 0; i < SPRHI; i++) {
 
 			BitReaderBig_AttachBuffer(&bitoper, PDATA);
@@ -1785,10 +1742,7 @@ void  DrawLiteralCel_New(void)
 			PDATA += (offset + 2) << 2;
 
 		}
-#if DEBUG_DRAW_LIT_FUN_1
-		DumpMem("./draw_literal_1_after.bin");
-		exit(0);
-#endif
+		AddVerificationData("draw_literal_1");
 	}
 	break;
 	default:
@@ -2460,122 +2414,82 @@ int  TexelDraw_Arbitrary(uint16_t CURPIX, uint16_t LAMV,
 	return 0;
 }
 
-void PrintReg(FILE *fd, const char *op_name, const char *id_name, int32_t val)
-{
-	fprintf(fd, "    mcoreClass.%s(%s, 32'h%x);\n", op_name, id_name, val);
+#define CEL_VARS_SIZE (1024 * 256)
+
+static void setCelArray(uint32_t *celArray) {
+	celArray[0] = HDDX1616;
+	celArray[1] = HDDY1616;
+	celArray[2] = HDX1616;
+	celArray[3] = HDY1616;
+	celArray[4] = VDX1616;
+	celArray[5] = VDY1616;
+	celArray[6] = XPOS1616;
+	celArray[7] = YPOS1616;
+	celArray[8] = HDX1616_2;
+	celArray[9] = HDY1616_2;
+	celArray[10] = TEXTURE_WI_START;
+	celArray[11] = TEXTURE_HI_START;
+	celArray[12] = TEXEL_INCX;
+	celArray[13] = TEXEL_INCY;
+	celArray[14] = TEXTURE_WI_LIM;
+	celArray[15] = TEXTURE_HI_LIM;
+	celArray[16] = TEXEL_FUN_NUMBER;
+	celArray[17] = SPRWI;
+	celArray[18] = SPRHI;
+	celArray[21] = BITCALC;
+
+	celArray[0 | 0x80] = BITADDR;
+	celArray[1 | 0x80] = BITBUFLEN;
+	celArray[2 | 0x80] = BITBUF;
+	celArray[3 | 0x80] = CCBFLAGS;
+	celArray[4 | 0x80] = PIXC;
+	celArray[5 | 0x80] = PRE0;
+	celArray[6 | 0x80] = PRE1;
+	celArray[7 | 0x80] = TARGETPROJ;
+	celArray[8 | 0x80] = SRCDATA;
+	celArray[9 | 0x80] = PLUTF;
+	celArray[10 | 0x80] = PDATF;
+	celArray[11 | 0x80] = NCCBF;
+	celArray[12 | 0x80] = PXOR1;
+	celArray[13 | 0x80] = PXOR2;
 }
 
-#define PRINT_CEL_VAR_INT(_fd, _id) \
-PrintReg(_fd, "set_cel_int_var", #_id"_ID", _id)
-
-#define PRINT_CEL_VAR_UINT(_fd, _id) \
-PrintReg(_fd, "set_cel_uint_var", #_id"_ID", _id)
-
-#define PRINT_PDEC(_fd, _pdec) \
-do { \
-fprintf(_fd, "/*Setup PDEC begin*/\n"); \
-PrintReg(_fd, "set_utils_reg", "32'h20", _pdec.plutaCCBbits); \
-PrintReg(_fd, "set_utils_reg", "32'h21", _pdec.pixelBitsMask); \
-PrintReg(_fd, "set_utils_reg", "32'h22", _pdec.tmask); \
-fprintf(_fd, "/*Setup PDEC end*/\n"); \
-} while (0)
-
-void PrintCelVars(FILE *fd)
-{
-	uint32_t bpp = BPP[PRE0 & PRE0_BPP_MASK];
-
-	fprintf(fd, "/*Cel Vars setup begin*/\n");
-
-	PRINT_CEL_VAR_INT(fd, HDDX1616);
-	PRINT_CEL_VAR_INT(fd, HDDY1616);
-	PRINT_CEL_VAR_INT(fd, HDX1616);
-	PRINT_CEL_VAR_INT(fd, HDY1616);
-	PRINT_CEL_VAR_INT(fd, VDX1616);
-	PRINT_CEL_VAR_INT(fd, VDY1616);
-	PRINT_CEL_VAR_INT(fd, XPOS1616);
-	PRINT_CEL_VAR_INT(fd, YPOS1616);
-	PRINT_CEL_VAR_INT(fd, HDX1616_2);
-	PRINT_CEL_VAR_INT(fd, HDY1616_2);
-	PRINT_CEL_VAR_INT(fd, TEXTURE_WI_START);
-	PRINT_CEL_VAR_INT(fd, TEXTURE_HI_START);
-	PRINT_CEL_VAR_INT(fd, TEXEL_INCX);
-	PRINT_CEL_VAR_INT(fd, TEXEL_INCY);
-	PRINT_CEL_VAR_INT(fd, TEXTURE_WI_LIM);
-	PRINT_CEL_VAR_INT(fd, TEXTURE_HI_LIM);
-	PRINT_CEL_VAR_INT(fd, TEXEL_FUN_NUMBER);
-	PRINT_CEL_VAR_INT(fd, SPRWI);
-	PRINT_CEL_VAR_INT(fd, SPRHI);
-	PRINT_CEL_VAR_INT(fd, BITCALC);
-
-	PRINT_CEL_VAR_UINT(fd, BITADDR);
-	PRINT_CEL_VAR_UINT(fd, BITBUFLEN);
-	PRINT_CEL_VAR_UINT(fd, BITBUF);
-	PRINT_CEL_VAR_UINT(fd, CCBFLAGS);
-	PRINT_CEL_VAR_UINT(fd, PIXC);
-	PRINT_CEL_VAR_UINT(fd, PRE0);
-	PRINT_CEL_VAR_UINT(fd, PRE1);
-	PRINT_CEL_VAR_UINT(fd, TARGETPROJ);
-	PRINT_CEL_VAR_UINT(fd, SRCDATA);
-	PRINT_CEL_VAR_UINT(fd, PLUTF);
-	PRINT_CEL_VAR_UINT(fd, PDATF);
-	PRINT_CEL_VAR_UINT(fd, NCCBF);
-	PRINT_CEL_VAR_UINT(fd, PXOR1);
-	PRINT_CEL_VAR_UINT(fd, PXOR2);
-	fprintf(fd, "/*Cel Vars setup end*/\n");
+static void setPLUT(uint32_t *plut) {
+	for (int i = 0; i  < 32; i++) {
+		plut[i] = PLUT[i];
+	}
 }
 
-void PrintMregs(FILE *fd, bool write_zeros)
-{
-	fprintf(fd, "\n\n/*Setup mregs begin*/\n");
-	for (int i = 0; i < 2048; i++) {
-		if (mregs[i] != 0 || write_zeros)
-			fprintf(fd, "    mcoreClass.set_mregs(32'h%x, 32'h%x);\n", i, mregs[i]);
+static bool _AddSimData(bool is_verification, std::string test_name) {
+	uint32_t celArray[256] = {};
+	uint32_t plut[32];
+	uint32_t rmodWmodFsm[3] = {(uint32_t)RMOD, (uint32_t)WMOD, (uint32_t)_madam_FSM};
+
+	if (simFactory->isFull()) {
+		simFactory->WriteData();
+		return false;
 	}
 
-	fprintf(fd, "    mcoreClass.set_wmod(32'h%x);\n", WMOD);
-	fprintf(fd, "\n\n/*Setup mregs end*/\n");
+	setCelArray(celArray);
+	setPLUT(plut);
+
+	return simFactory->AddSim(MemoryDump(Mem, 0x300000),
+		CelDump (
+			CEL_VARS_SIZE,
+			CelData( std::make_tuple(mregs, 2048*4, 0x0) ),
+			CelData( std::make_tuple(celArray, sizeof(celArray), 0x14000) ),
+			CelData( std::make_tuple(plut, sizeof(plut), 0x4000)),
+			CelData( std::make_tuple(rmodWmodFsm, sizeof(rmodWmodFsm), 0xC000))
+		),
+		is_verification,
+		test_name
+	);
 }
 
-void PrintPLUT(FILE *fd)
-{
-	fprintf(fd, "logic [15:0] PLUT [32] = '{\n");
-	for (int i =0; i < 31; i++) {
-		fprintf(fd, "    16'h%x,\n", PLUT[i]);
-	}
-	fprintf(fd, "    16'h%x\n", PLUT[31]);
-	fprintf(fd, "};\n\n");
+bool AddSimData(std::string test_name) {
+	return _AddSimData(false, test_name);
 }
 
-void _WriteSimSVH(FILE *fd, bool write_zeros)
-{
-	fprintf(fd, "\n\n");
-	PrintPLUT(fd);
-
-	fprintf(fd, "task automatic setup_cel_core(ref McoreRegs_t mcoreClass);\n");
-	PrintCelVars(fd);
-	PrintMregs(fd, write_zeros);
-	PRINT_PDEC(fd, pdec);
-	fprintf(fd, "    mcoreClass.load_plut(PLUT);\n");
-	fprintf(fd, "endtask");
-	fprintf(fd, "\n\n");
-}
-
-void WriteSimSVH(const char *name, bool write_zeros)
-{
-	FILE *fd = fopen(name, "w+");
-	assert(fd);
-
-	_WriteSimSVH(fd, write_zeros);
-
-	fclose(fd);
-}
-
-void DumpMem(const char *name)
-{
-	FILE *fd;
-
-	fd = fopen(name, "w+");
-	assert(fd);
-	fwrite(Mem, 0x300000, 1, fd);
-	fclose(fd);
+bool AddVerificationData(std::string test_name) {
+	return _AddSimData(true, test_name);
 }

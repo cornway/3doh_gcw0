@@ -109,7 +109,7 @@ cueFile *cue_get(const char *path)
 			if (strstr(line,"TRACK 01 MODE1/2048"))
 			{
 				cue->cd_format = MODE1_2048;
-			} 
+			}
 			else if (strstr(line, "TRACK 01 MODE1/2352"))
 			{
 				cue->cd_format = MODE1_2352;
@@ -117,7 +117,7 @@ cueFile *cue_get(const char *path)
 			else if (strstr(line, "TRACK 01 MODE2/2352"))
 			{
 				cue->cd_format = MODE2_2352;
-			} 
+			}
 			/*else
 			{
 				printf("[4DO]: Unknown file format in CUE file: %s -> %s", line);
@@ -150,7 +150,7 @@ const char *cue_get_cd_format_name(CD_format cd_format)
 
 int cue_is_cue_path(const char *path)
 {
-	char *dot = strrchr(path, '.');
+	const char *dot = strrchr(path, '.');
 	return (dot && (!strcmp(dot, ".cue") || !strcmp(dot, ".CUE")));
 }
 

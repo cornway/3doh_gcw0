@@ -64,7 +64,7 @@ extern int cnbfix;
 #define ARM_SWI_MASK    0x0f000000
 #define ARM_SWI_SIGN    0x0f000000
 
-//режимы процессора----------------------------------------------------------
+//пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ----------------------------------------------------------
 #define ARM_MODE_USER   0
 #define ARM_MODE_FIQ    1
 #define ARM_MODE_IRQ    2
@@ -85,14 +85,14 @@ static const uint8_t arm_mode_table[] =
 	ARM_MODE_UNK,  ARM_MODE_UNK,	 ARM_MODE_UNK,	   ARM_MODE_UNK
 };
 
-//для посчета тактов------------------------------------------------------------
+//пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ------------------------------------------------------------
 #define NCYCLE 4
 #define SCYCLE 1
 #define ICYCLE 1
 
 //--------------------------Conditions-------------------------------------------
 //flags - N Z C V  -  31...28
-static const uint16_t cond_flags_cross[] = {    //((cond_flags_cross[cond_feald]>>flags)&1)  -- пример проверки
+static const uint16_t cond_flags_cross[] = {    //((cond_flags_cross[cond_feald]>>flags)&1)  -- пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	0xf0f0,                                 //EQ - Z set (equal)
 	0x0f0f,                                 //NE - Z clear (not equal)
 	0xcccc,                                 //CS - C set (unsigned higher or same)
@@ -557,9 +557,9 @@ uint8_t *_arm_Init(void)
 		RON_CASH[i] = RON_FIQ[i] = 0;
 
 	gSecondROM = 0;
-	pRam   = malloc(RAMSIZE * sizeof(uint8_t));
-	pRom   = malloc(ROMSIZE * 2 * sizeof(uint8_t));
-	pNVRam = malloc(NVRAMSIZE * sizeof(uint8_t));
+	pRam   = (uint8_t *)malloc(RAMSIZE * sizeof(uint8_t));
+	pRom   = (uint8_t *)malloc(ROMSIZE * 2 * sizeof(uint8_t));
+	pNVRam = (uint8_t *)malloc(NVRAMSIZE * sizeof(uint8_t));
 
 	memset( pRam, 0, RAMSIZE);
 	memset( pRom, 0, ROMSIZE * 2);
@@ -709,7 +709,7 @@ void stm_accur(uint32_t opc, uint32_t base, uint32_t rn_ind)
 {
 	uint16_t x = opc & 0xffff;
 	uint16_t list = opc & 0x7fff;
-	uint32_t base_comp, //по ней шагаем
+	uint32_t base_comp, //пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 		 i = 0;
 
 	x = (x & 0x5555) + ((x >> 1) & 0x5555);
@@ -790,7 +790,7 @@ void arm60_BDT(uint32_t opc)
 
 		ldm_accur(opc, base, rn_ind);
 
-	} else  //из регистра в память
+	} else  //пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 		stm_accur(opc, base, rn_ind);
 }
 
@@ -804,10 +804,10 @@ typedef struct TagArg {
 static void decode_swi_lle(void)
 {
 	SPSR[arm_mode_table[0x13]] = CPSR;
-	
+
 	SETI(1);
 	SETM(0x13);
-	
+
 	RON_USER[14] = RON_USER[15];
 	RON_USER[15] = 0x00000008;
 }

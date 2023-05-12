@@ -284,19 +284,19 @@ got_error:
 			switch(error)
 			{
 				case 1:
-					print_string("ISO file INVALID or", 0xFFFF, 0, 0, 15, screen->pixels);
-					print_string("can't be read, does not exist...", 0xFFFF, 0, 0, 30, screen->pixels);
-					print_string(imageFile, 0xFFFF, 0, 0, 50, screen->pixels);
-					print_string("Make sure to use iso or", 0xFFFF, 0, 0, 80, screen->pixels);
-					print_string("iso/cue dumps !", 0xFFFF, 0, 0, 100, screen->pixels);
+					print_string("ISO file INVALID or", 0xFFFF, 0, 0, 15, (uint16_t *)screen->pixels);
+					print_string("can't be read, does not exist...", 0xFFFF, 0, 0, 30, (uint16_t *)screen->pixels);
+					print_string(imageFile, 0xFFFF, 0, 0, 50, (uint16_t *)screen->pixels);
+					print_string("Make sure to use iso or", 0xFFFF, 0, 0, 80, (uint16_t *)screen->pixels);
+					print_string("iso/cue dumps !", 0xFFFF, 0, 0, 100, (uint16_t *)screen->pixels);
 				break;
 				case 2:
-					print_string("BIOS file INVALID", 0xFFFF, 0, 0, 15, screen->pixels);
-					print_string("or DOES NOT EXIST !", 0xFFFF, 0, 0, 30, screen->pixels);
+					print_string("BIOS file INVALID", 0xFFFF, 0, 0, 15, (uint16_t *)screen->pixels);
+					print_string("or DOES NOT EXIST !", 0xFFFF, 0, 0, 30, (uint16_t *)screen->pixels);
 
-					print_string("Make sure to put the bios file in", 0xFFFF, 0, 0, 80, screen->pixels);
-					print_string(home, 0xFFFF, 0, 0, 100, screen->pixels);
-					print_string("as bios.bin, lowercase.", 0xFFFF, 0, 0, 120, screen->pixels);
+					print_string("Make sure to put the bios file in", 0xFFFF, 0, 0, 80, (uint16_t *)screen->pixels);
+					print_string(home, 0xFFFF, 0, 0, 100, (uint16_t *)screen->pixels);
+					print_string("as bios.bin, lowercase.", 0xFFFF, 0, 0, 120, (uint16_t *)screen->pixels);
 				break;
 			}
 #ifdef SCALING
